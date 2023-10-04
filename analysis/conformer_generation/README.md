@@ -1,14 +1,21 @@
+# Protocol
+
+This directory contains data and scripts that illustrate how one can generate conformers
+mkdir scratch
+./run.sh
+./pars.sh
+
+jupyter notebook analysis.ipynb
+
 # Technicalities
 
 This analysis is demonstrated in a jupyter notebook.
-It can be transformed to a python script; alternatively, we can use google colab or other notebooks.
 
-
-## How to run this analysis:
+To run it, please follow these steps:
 
 0. prepare a working environment using conda (https://docs.conda.io/projects/conda/en/stable/)
 
-  * install Anaconda: https://docs.anaconda.com/free/anaconda/install/
+  * install Anaconda on your computer: https://docs.anaconda.com/free/anaconda/install/
   * create conda environment from the attached `environment.yml` file:
 
     ```
@@ -19,22 +26,21 @@ It can be transformed to a python script; alternatively, we can use google colab
 
 ## How to view this analysis:
 
-* in a browser, go to: LINK
+* in the terminal with activated conda environment, run:
+
+  ```
+  jupyter notebook analysis.ipynb
+  ```
+
+* if you are asked for the code or password (there is no), then follow the instructions from the terminal;
+  there should be a link to a website (someting similar to: http://localhost:8888/notebooks/analysis.ipynb);
+  open this link in your browser.
+
+* if the code is not executed automatically, click on "Run" -> "Run All Cells"
 
 
 ## Resources
 
 * if you want to learn more about conda, check https://carpentries-incubator.github.io/introduction-to-conda-for-data-scientists/
-
-
-
-# Protocol
-
-
-mkdir scratch
-./run.sh
-./pars.sh
-
-jupyter notebook analysis.ipynb
 
 
