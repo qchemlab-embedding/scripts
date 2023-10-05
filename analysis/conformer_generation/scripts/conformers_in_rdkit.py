@@ -47,7 +47,6 @@ def optimize_confs(confs):
     converged = 0
     for conf in confs:
         opt = AllChem.UFFOptimizeMolecule(mol, confId=conf, maxIters=options.maxiter)
-        #opt = AllChem.MMFFOptimizeMolecule(mol, confId=conf, maxIters=options.maxiter)
         converged+=opt
         
         if opt == -1:
@@ -79,8 +78,6 @@ w = Chem.SDWriter(options.out)
 
 for confId in allconfs:
    ff  = AllChem.UFFGetMoleculeForceField(mol, confId = confId)
-   #gg  = AllChem.MMFFGetMoleculeProperties(mol)
-   #ff  = AllChem.MMFFGetMoleculeForceField(mol, gg, confId = confId)
    ff.Minimize()
    energy_value = ff.CalcEnergy()
    mol.SetProp('ENERGY', '{0:.2f}'.format(energy_value))
