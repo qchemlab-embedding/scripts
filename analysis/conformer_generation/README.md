@@ -80,10 +80,5 @@ Tips:
 ## Resources
 
 * if you want to learn more about conda, check https://carpentries-incubator.github.io/introduction-to-conda-for-data-scientists/
-* if you want to learn more about jupyter notebooks, check:
-* if you like other notebooks, then please use what you like; some popular alternatives are:
-
-
-
 
 
