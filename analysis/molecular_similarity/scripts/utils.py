@@ -22,7 +22,7 @@ def align_structures_to_lowest_energy_and_show(moldict, energy_dict, core_smiles
     
     for key, mol in moldict.items():
         match_mol_to_core = mol.GetSubstructMatch(Chem.MolFromSmiles(core_smiles))
-        AllChem.AlignMol(mol,moldict[first],atomMap=list(zip(match_mol_to_core,core_lowest)))
+        AllChem.AlignMol(mol,moldict[lowest],atomMap=list(zip(match_mol_to_core,core_lowest)))
         
     p = py3Dmol.view(width=400,height=400)
     for key, mol in moldict.items(): 
