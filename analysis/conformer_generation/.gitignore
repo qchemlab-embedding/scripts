@@ -1,0 +1,8 @@
+.ipynb_checkpoints/
+detailed_list_selected_conformers_from_rdkit
+env/
+list_selected_conformers_from_rdkit
+results_starting_from_m1_h2o_in/
+results_starting_from_m1_h2o_out/
+scratch/
+scripts/__pycache__/
