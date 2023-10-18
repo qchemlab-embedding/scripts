@@ -4,18 +4,18 @@
 #SBATCH --ntasks-per-node=8
 #SBATCH --mem-per-cpu=5GB
 #SBATCH --time=01:00:00 
-#SBATCH -A plgqctda2-cpu
+#SBATCH -A plgqcembed-cpu
 #SBATCH -p plgrid-testing
 #SBATCH --output="output.out"
 #SBATCH --error="error.err"
 
-scratch=$SCRATCH/alltests/pyadf
+# adapt this:
+scratch=$SCRATCH/gosia-scratch/pyadf-tests
 mkdir -p $scratch
 
-export data_dir=$PLG_GROUPS_STORAGE/plggqcembed/alltests/pyadf
-mkdir -p $data_dir
+project=../generic
 
-
+# normally, this should not need to be adapted:
 srun /bin/hostname
 
 module purge
@@ -23,7 +23,6 @@ module use /net/pr2/projects/plgrid/plggqcembed/groupmodules
 module load pyadf-master
 
 cd $SLURM_SUBMIT_DIR
-project=../generic
 config='/net/pr2/projects/plgrid/plggqcembed/devel/tools/pyadf-jobrunner.conf'
 # to save results add -s flag:
 # pyadf -s --jobrunnerconf $config $project.pyadf
