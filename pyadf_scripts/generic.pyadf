@@ -19,11 +19,22 @@ import numpy
 #   - adapt to your needs (!!!) by looking at:
 #     - ADF and DIRAC manuals
 #     - pyadf code
-#   - contribute to this script (git repo: XXXXXXXXXXXXXX) 
+#   - contribute to this script (git repo: git@github.com:qchemlab-embedding/scripts.git)
 #
-# last rev. Gosia Olejniczak, 24/08/2023
+# last rev. Gosia Olejniczak, 18/10/2023
 # tested with pyadf, git #f0d7a96e90db32e65994ea07079665bcf542824a
 #
+
+
+
+##########################################################
+# if you need to store large data, 
+# please use a directory in $PLG_GROUPS_STORAGE/plggqcembed/
+##########################################################
+
+# adapt this to your needs, 
+# but do not change the "/net/pr2/projects/plgrid/plggqcembed/" core:
+data_dir='/net/pr2/projects/plgrid/plggqcembed/gosia-storage/pyadf_tests/getgrid'
 
 
 ##########################################################
@@ -111,7 +122,6 @@ r_env1 = adfsinglepointjob(m_env1, basis_set, settings=settings, options=gen_sym
 ##########################################################
 
 # these settings you need to adapt for the job - storage and grid settings:
-data_dir = os.path.join(pyadfenv.outdir, 'data')
 if not os.path.exists(data_dir):
     os.makedirs(data_dir)
 
