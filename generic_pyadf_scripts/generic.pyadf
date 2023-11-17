@@ -78,8 +78,13 @@ settings = adfsettings()
 settings.set_ZORA(ZORA=True, SpinOrbit=False)  # choose the Hamiltonian
 settings.set_unrestricted(False)               # ... option related to the Hamiltonian
 settings.set_noncollinear(False)               # ... option related to the Hamiltonian
-settings.set_functional('PBE')                 # choose DFT functional
 basis_set = "DZP"                              # choose the basis set
+settings.set_functional('PBE')                 # choose DFT functional
+# if you need dispersion corrections, try:
+#settings.set_dispersion('Grimme3')            # this will use "PBE-D3"
+#or:
+#settings.set_dispersion('')                   # this will use "PBE-D"
+
 
 # these settings can be left as they are:
 # search in pyadf code what they mean 
