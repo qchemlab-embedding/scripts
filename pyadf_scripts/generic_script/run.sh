@@ -13,7 +13,7 @@
 scratch=$SCRATCH/gosia-scratch/pyadf-tests
 mkdir -p $scratch
 
-project=../generic
+project=generic
 
 # normally, this should not need to be adapted:
 srun /bin/hostname
