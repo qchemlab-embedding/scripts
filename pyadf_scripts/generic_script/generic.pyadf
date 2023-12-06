@@ -93,9 +93,10 @@ basis_set = "DZP"                              # choose the basis set
 settings.set_functional('PBE')                 # choose DFT functional
 # if you need dispersion corrections, try:
 #settings.set_dispersion('Grimme3')            # this will use "PBE-D3" or:
-#settings.set_dispersion('Grimme3 BJDAMP')     # this will use "PBE-D3BJ"
-#or:
+#settings.set_dispersion('Grimme3 BJDAMP')     # this will use "PBE-D3BJ" or:
 #settings.set_dispersion('')                   # this will use "PBE-D"
+# if you DO NOT want dispersion corrections, then
+#settings.set_dispersion('None')
 
 
 # these settings can be left as they are:
