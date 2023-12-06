@@ -1,0 +1,231 @@
+#!/bin/env python
+import numpy
+import os
+
+from pyadf import *
+if 'pyadfenv' not in globals():
+    from pyadf.Initialization import *
+
+import xcfun
+
+DefaultJobRunner.instance = None
+job_runner_conf = JobRunnerConfiguration(conffile='/net/pr2/projects/plgrid/plggqcembed/devel/tools/pyadf-jobrunner.conf',
+                                         jobbasedir=pyadfenv.outdir)
+DefaultJobRunner(conf=job_runner_conf)
+
+
+data_dir='/net/pr2/projects/plgrid/plggqcembed/gosia-storage/pyadf_tests/pyadf_scripts/interaction_energies_ADF'
+
+
+# UNITS
+# -----
+# Conversion factors - based on https://physics.nist.gov/cuu/Constants/energy.html:
+# * au <-> eV: 1 au = 27.211386245988 eV
+# * au <-> J:  1 au = 4.3597447222071e-18 J
+# Avogadro constant:
+# * 6.02214076 x 10^{23} [mol^{-1}] based on https://physics.nist.gov/cgi-bin/cuu/Value?na|search_for=avogadro
+# J <-> cal:
+# * 1 kcal = 4.184 kJ based on ISO 31-4, https://en.wikipedia.org/wiki/Calorie
+avogadro_constant = 6.02214076e23
+cal_to_j = 4.184
+au_in_eV = 27.211386245988
+au_in_kJpermol =  4.3597447222071e-21 * avogadro_constant
+au_in_kcalpermol = au_in_kJpermol / cal_to_j
+
+
+def grep_energies(results):
+    """
+    WARNING: this only works when "TOTALENERGY" keyword is used in ADF calculations
+    returns energy values in au
+    """
+    energy = results.get_total_energy()
+    kin_energy = results.get_kinetic_energy()
+    coul_energy = results.get_result_from_tape('Total Energy', 'Coulomb energy')
+    nuc_energy = results.get_result_from_tape('Total Energy', 'Nuclear repulsion energy')
+    return energy, kin_energy, coul_energy, nuc_energy
+
+
+def grep_bond_energies(results):
+    """
+    returns energy values in au
+    """
+    return results.get_bond_energy()
+
+
+
+
+##########################################################
+# 1. set up molecular data
+##########################################################
+
+# these settings you need to adapt for the job
+# molecular data:
+geometries_dir = os.path.join(pyadfenv.outdir, 'coordinates')
+file_mol  = os.path.join(geometries_dir, 'fminus.xyz')
+file_env1 = os.path.join(geometries_dir, 'h2o.xyz')
+m_mol  = molecule(file_mol)
+m_env1 = molecule(file_env1)
+m_tot = m_mol + m_env1
+
+# if a system is charged, then remember to set it up 
+charge_mol=-1
+m_mol.set_charge(charge_mol)
+m_tot.set_charge(charge_mol)
+
+# ask the program not to identify molecular symmetry
+m_mol.set_symmetry('NOSYM')
+m_env1.set_symmetry('NOSYM')
+m_tot.set_symmetry('NOSYM')
+
+print(m_mol.print_coordinates())
+
+
+
+##########################################################
+# 2. general settings for ADF job
+##########################################################
+
+settings = adfsettings()
+
+# these settings you need to adapt for the job - search in ADF manual for possible options:
+settings.set_ZORA(ZORA=True, SpinOrbit=False)  # choose the Hamiltonian
+settings.set_unrestricted(False)               # ... option related to the Hamiltonian
+settings.set_noncollinear(False)               # ... option related to the Hamiltonian
+basis_set = "DZP"                              # choose the basis set
+settings.set_functional('PBE')                 # choose DFT functional
+# if you need dispersion corrections, try:
+#settings.set_dispersion('Grimme3')            # this will use "PBE-D3"
+#or:
+#settings.set_dispersion('')                   # this will use "PBE-D"
+
+
+# these settings can be left as they are:
+# search in pyadf code what they mean 
+settings.ncycles=1000                     
+settings.set_integration(accint=8.0, acclist=[8.0, 8.0])
+settings.set_dependency(True)
+settings.set_exactdensity(True)
+settings.set_save_tapes([21,10,41])
+settings.set_occupations(['KEEPORBITALS '+str(settings.ncycles)])
+# 'TOTALENERGY' keyword does not work with ZORA
+#gen_sym_opts = ['NOSYM', 'NOSYMFIT', 'NUCLEARMODEL gaussian', 'TOTALENERGY']
+gen_sym_opts = ['NOSYM', 'NOSYMFIT', 'NUCLEARMODEL gaussian']
+
+
+##########################################################
+# 3. Calculate bond energies for a supermolecule and all
+#    fragments; then, calculate interaction energy
+#    using "supermolecular approach"
+##########################################################
+
+r_tot  = adfsinglepointjob(m_tot,  basis_set, settings=settings, options=gen_sym_opts).run()
+r_mol  = adfsinglepointjob(m_mol,  basis_set, settings=settings, options=gen_sym_opts).run()
+r_env1 = adfsinglepointjob(m_env1, basis_set, settings=settings, options=gen_sym_opts).run()
+
+# this works if calculations are done with "TOTALENERGY" keyword
+#energy_tot, kin_energy_tot, coul_energy_tot, nuc_energy_tot = grep_energies(r_tot)
+#energy_mol, kin_energy_mol, coul_energy_mol, nuc_energy_mol = grep_energies(r_mol)
+#energy_env1, kin_energy_env1, coul_energy_env1, nuc_energy_env1 = grep_energies(r_env1)
+#
+#print('Total, kinetic, coulomb, nuclear repulsion energies in a total system:      ', energy_tot, kin_energy_tot, coul_energy_tot, nuc_energy_tot)
+#print('Total, kinetic, coulomb, nuclear repulsion energies in an active subsystem: ', energy_mol, kin_energy_mol, coul_energy_mol, nuc_energy_mol)
+#print('Total, kinetic, coulomb, nuclear repulsion energies in an env1   subsystem: ', energy_env1, kin_energy_env1, coul_energy_env1, nuc_energy_env1)
+
+e_tot = grep_bond_energies(r_tot)
+e_mol = grep_bond_energies(r_mol)
+e_env1= grep_bond_energies(r_env1)
+e_int = e_tot - e_mol - e_env1
+print("Interaction energy - based on supermolecular calculations [kcal/mol]: ", e_int * au_in_kcalpermol)
+
+
+##########################################################
+# 4. Calculate interaction energies from FDE calculations
+##########################################################
+
+# use the supermolecular ADF calculation to get a grid for the full system
+agrid = adfgrid(res_super)
+
+#############################################################
+# get potentials and densities of fragments on the grid
+
+# nuclear potential
+nucpot_a = r_mol.get_potential(agrid, pot='nuc')
+nucpot_b = r_env1.get_potential(agrid, pot='nuc')
+
+# Coulomb potential (of the electrons)
+elpot_a = r_mol.get_potential(agrid, pot='coul')
+elpot_b = r_env1.get_potential(agrid, pot='coul')
+
+# electron density (including 1st derivative)
+dens_a = r_mol.get_density(agrid, order=1)
+dens_b = r_env1.get_density(agrid, order=1)
+dens_tot = dens_a + dens_b
+
+# fitted density (for fit correction to electrostatic interaction)
+fitdens_a = r_mol.get_density(agrid, fit=True)
+fitdens_b = r_env1.get_density(agrid, fit=True)
+
+fitcorr_a = dens_a[0] - fitdens_a
+fitcorr_b = dens_b[0] - fitdens_b
+
+################################################################
+# electrostatic interaction energy
+
+# nuclear-nuclear interaction energy
+nnint = mol_a.get_nuclear_interaction_energy(mol_b)
+
+# nuclear-electron interaction energy
+enint = (nucpot_a * dens_b[0]).integral() + (nucpot_b * dens_a[0]).integral()
+
+# electron-electron interaction energy
+eeint = 0.5 * (elpot_a * dens_b[0]).integral() + 0.5 * (elpot_b * dens_a[0]).integral()
+
+# fit correction to ee-interaction
+eecorr = 0.5 * (elpot_a * fitcorr_b).integral() + 0.5 * (elpot_b * fitcorr_a).integral()
+
+inten_elstat = nnint + enint + eeint + eecorr
+
+################################################################
+# nonadditive XC energy
+
+fun = xcfun.Functional({'PBE': 1.0})
+
+xc_a = numpy.dot(agrid.weights,
+                 fun.eval_energy_n(density=dens_a[0].values, densgrad=dens_a[1].values))
+xc_b = numpy.dot(agrid.weights,
+                 fun.eval_energy_n(density=dens_b[0].values, densgrad=dens_b[1].values))
+xc_tot = numpy.dot(agrid.weights,
+                   fun.eval_energy_n(density=dens_tot[0].values, densgrad=dens_tot[1].values))
+
+inten_xc = xc_tot - xc_a - xc_b
+
+################################################################
+# nonadditive kinetic energy
+
+fun = xcfun.Functional({'pw91k': 1.0})
+
+kin_a = numpy.dot(agrid.weights,
+                  fun.eval_energy_n(density=dens_a[0].values, densgrad=dens_a[1].values))
+kin_b = numpy.dot(agrid.weights,
+                  fun.eval_energy_n(density=dens_b[0].values, densgrad=dens_b[1].values))
+kin_tot = numpy.dot(agrid.weights,
+                    fun.eval_energy_n(density=dens_tot[0].values, densgrad=dens_tot[1].values))
+
+inten_kin = kin_tot - kin_a - kin_b
+
+print("Electrostatic interaction energy: ", inten_elstat * au_in_eV)
+print(" incl. fit correction: ", eecorr * au_in_eV)
+print()
+
+print("Nonadditive XC energy: ", inten_xc * au_in_eV)
+print()
+
+print("Nonadditive kinetic energy: ", inten_kin * au_in_eV)
+print()
+
+inten_tot = inten_elstat + inten_xc + inten_kin
+
+print("Total interaction energy based on FDE calculations (via PyEmbed) [kcal/mol]: ", inten_tot * au_in_kcalpermol)
+
+
+

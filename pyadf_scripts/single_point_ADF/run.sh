@@ -13,14 +13,15 @@
 scratch=$SCRATCH/gosia-scratch/pyadf-tests
 mkdir -p $scratch
 
-project=../generic
+project=energy
 
 # normally, this should not need to be adapted:
 srun /bin/hostname
 
 module purge
 module use /net/pr2/projects/plgrid/plggqcembed/groupmodules
-module load pyadf-master
+#module load pyadf-master
+module load pyadf-devel
 
 cd $SLURM_SUBMIT_DIR
 config='/net/pr2/projects/plgrid/plggqcembed/devel/tools/pyadf-jobrunner.conf'
