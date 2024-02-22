@@ -10,14 +10,14 @@
 #SBATCH --error="error.err"
 
 # adapt this:
-scratch=$SCRATCH/gosia-scratch/pyadf-tests/single_point_ADF
+scratch=$SCRATCH/gosia-scratch/pyadf-tests/geometry_optimization_ADF
 mkdir -p $scratch
 
-data_dir=$PLG_GROUPS_STORAGE/plggqcembed/gosia-storage/pyadf_tests/single_point_ADF
+data_dir=$PLG_GROUPS_STORAGE/plggqcembed/gosia-storage/pyadf_tests/geometry_optimization_ADF
 mkdir -p $data_dir
 
 
-project=sp
+project=geom
 cp $project.pyadf $data_dir
 cp -r coordinates $data_dir
 
@@ -26,7 +26,7 @@ srun /bin/hostname
 
 module purge
 module use /net/pr2/projects/plgrid/plggqcembed/groupmodules
-module load pyadf-devel
+module load pyadf-master
 
 cd $SLURM_SUBMIT_DIR
 config='/net/pr2/projects/plgrid/plggqcembed/devel/tools/pyadf-jobrunner.conf'
@@ -37,5 +37,6 @@ config='/net/pr2/projects/plgrid/plggqcembed/devel/tools/pyadf-jobrunner.conf'
 cd $data_dir
 pyadf --jobrunnerconf $config $project.pyadf
 cp *out    $SLURM_SUBMIT_DIR
+cp -r data $SLURM_SUBMIT_DIR
 cd $SLURM_SUBMIT_DIR
 

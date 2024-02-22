@@ -12,7 +12,7 @@ job_runner_conf = JobRunnerConfiguration(conffile='/net/pr2/projects/plgrid/plgg
 DefaultJobRunner(conf=job_runner_conf)
 
 
-data_dir='/net/pr2/projects/plgrid/plggqcembed/gosia-storage/pyadf_tests/pyadf_scripts/single_point_ADF'
+data_dir='/net/pr2/projects/plgrid/plggqcembed/gosia-storage/pyadf_tests/single_point_ADF'
 
 
 # UNITS
@@ -88,10 +88,10 @@ settings = adfsettings()
 settings.set_ZORA(ZORA=True, SpinOrbit=False)  # choose the Hamiltonian
 settings.set_unrestricted(False)               # ... option related to the Hamiltonian
 settings.set_noncollinear(False)               # ... option related to the Hamiltonian
-basis_set = "DZP"                              # choose the basis set
+basis_set = "TZ2P"                             # choose the basis set
 settings.set_functional('PBE')                 # choose DFT functional
 # if you need dispersion corrections, try:
-#settings.set_dispersion('Grimme3')            # this will use "PBE-D3" or:
+settings.set_dispersion('Grimme3')            # this will use "PBE-D3" or:
 #settings.set_dispersion('Grimme3 BJDAMP')     # this will use "PBE-D3BJ" or:
 #settings.set_dispersion('')                   # this will use "PBE-D"
 # if you DO NOT want dispersion corrections, then
