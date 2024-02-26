@@ -130,7 +130,7 @@ m_tot_final = result_geom.get_molecule()
 m_tot_final.write(os.path.join(data_dir, 'supermolecule_optimized.xyz'))
 
 # check vibrational frequencies and save them
-result_freq = adffreqjob(m_tot, basis_set, settings=settings, geometrysettings=geom_settings).run()
+result_freq = adffreqjob(m_tot_final, basis_set, settings=settings, geometrysettings=geom_settings).run()
 
 freqs = result_freq.get_frequencies()
 modes_c = result_freq.get_normalmodes_c()
