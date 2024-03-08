@@ -1,0 +1,4 @@
+alloutput*.out
+output*.out
+*.err
+*.log
