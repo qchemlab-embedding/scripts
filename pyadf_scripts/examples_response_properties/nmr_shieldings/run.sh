@@ -13,7 +13,7 @@
 srun /bin/hostname
 module purge
 module use /net/pr2/projects/plgrid/plggqcembed/groupmodules
-module load pyadf-devel
+module load pyadf-master
 
 # adapt this:
 scratch=$SCRATCH/gosia-scratch/pyadf-tests/prp
@@ -31,6 +31,7 @@ cp -r coordinates $data_dir
 
 cd $data_dir
 pyadf --jobrunnerconf $config $project.pyadf
+cp $data_dir/*out $home_dir/
 cd $home_dir
 
 cp $data_dir/*.out .

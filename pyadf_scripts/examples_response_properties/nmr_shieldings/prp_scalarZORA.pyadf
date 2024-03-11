@@ -123,16 +123,7 @@ print(m_mol.print_coordinates())
 
 settings = adfsettings()
 
-# these settings you need to adapt for the job - search in ADF manual for possible options:
-# NOTE: choose one of these two options:
-# (1) if you want to run spin-orbit ZORA calculations: 
-settings.set_ZORA(ZORA=True, SpinOrbit=True)   # choose the Hamiltonian
-settings.set_noncollinear(True)                # ... option related to the Hamiltonian
-# (2) if you want to run scalar ZORA calculations: 
-#settings.set_ZORA(ZORA=True, SpinOrbit=False)  # choose the Hamiltonian
-
-# then, adapt the rest
-# use the same functional and basis set as for the geometry optimizations
+settings.set_ZORA(ZORA=True, SpinOrbit=False)  # choose the Hamiltonian
 settings.set_unrestricted(False)               # ... option related to the Hamiltonian
 settings.set_functional('PBE')                 # choose DFT functional
 basis_set = "DZP"                              # choose the basis set

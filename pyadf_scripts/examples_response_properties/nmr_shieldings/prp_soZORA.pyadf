@@ -147,6 +147,8 @@ settings.set_save_tapes([21,10,41])
 settings.set_occupations(['KEEPORBITALS '+str(settings.ncycles)])
 gen_sym_opts = ['NOSYM', 'NOSYMFIT', 'NUCLEARMODEL gaussian']
 
+settings.set_exactdensity(True)
+
 
 
 ##########################################################
