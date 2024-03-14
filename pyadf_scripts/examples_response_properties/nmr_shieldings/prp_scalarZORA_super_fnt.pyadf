@@ -9,7 +9,7 @@
 # so that you have enough CPU for each task
 #
 #
-# last. rev. Gosia Olejniczak, 12/03/2024
+# last. rev. Gosia Olejniczak, 14/03/2024
 #
 
 
@@ -20,7 +20,7 @@ import time
 # functions grepping key ADF results
 ##########################################################
 
-def calculate_nmr_shieldings(molecule, results, active_atoms=None, active_labels=None, active_coords=None, label=None, ghost_coords=None, print_active=False, print_ghost=False):
+def calculate_nmr_shieldings(molecule, results, active_atoms=None, active_labels=None, active_coords=None, label=None, ghost_coords=None, print_to_output=False):
 
     print( " # " )
     print( " # Output from calculate_nmr_shieldings:" )
@@ -49,7 +49,7 @@ def calculate_nmr_shieldings(molecule, results, active_atoms=None, active_labels
             coords = ax+", "+ay+", "+az
             tot_iso,para_iso,dia_iso,tot_aniso,para_aniso,dia_aniso = nmr_results.get_shielding(nuc=active_atoms[a])
 
-            if print_active:
+            if print_to_output:
                 print( "NMR results for an active atom: ", active_atoms[a], " at coords: "+coords+"\n" )
                 print( "@@ Shielding_iso_para  "+active_labels[a]+"("+label+") :", para_iso )
                 print( "@@ Shielding_iso_dia   "+active_labels[a]+"("+label+") :", dia_iso )
@@ -75,7 +75,7 @@ def calculate_nmr_shieldings(molecule, results, active_atoms=None, active_labels
             coords = cx+", "+cy+", "+cz
             tot_iso,para_iso,dia_iso,tot_aniso,para_aniso,dia_aniso = nmr_results.get_shielding(ghost=g+1)
 
-            if print_ghost:
+            if print_to_output:
                 print( "NMR results at ghost coords: "+coords+"\n" )
                 print( "## Shielding_iso_para  : ("+label+") :", para_iso )
                 print( "## Shielding_iso_dia   : ("+label+") :", dia_iso )
@@ -266,213 +266,90 @@ basis_frz = basis_set
 #agrid = adfgrid(r_tot)
 #
 #results_tot_iso_super, results_tot_aniso_super \
-#= calculate_nmr_shieldings(m_tot, r_tot, active_atoms=super_nmr_atoms_index,  active_labels=super_nmr_atoms_label, active_coords=super_nmr_atoms_coords, label="supermolecule", print_active=True)
+#= calculate_nmr_shieldings(m_tot, r_tot, active_atoms=super_nmr_atoms_index,  active_labels=super_nmr_atoms_label, active_coords=super_nmr_atoms_coords, label="supermolecule", print_to_output=True)
 
-
-# --------------------
-# run FnT calculations
-# --------------------
+# ------------------------------------------------
+# run calculations on subsystems (FnT)
+# Note: here we play with different paritioning 
+#       schemes, so adapt to your needs;
+#       here, we basically have:
+#       m_tot = m_mol + m_h2o + m_env
+#       and we focus on NMR of:
+#         * "C" and "N" in m_mol
+#         * "H" in m_h2o involved in H-bond ("Hb")
+# ------------------------------------------------
 
 # (1) mol as an "active" subsystem, h2o+env as a frozen environment
+
 # if not done before, we need to prepare a frozen environment first:
 r_h2oenv = adfsinglepointjob(m_h2o+m_env, basis_set, settings=settings, options=gen_sym_opts).run()
+
 frags = [ fragment(None,  [m_mol]), 
           fragment(r_h2oenv, [m_h2o+m_env], isfrozen=True, fdeoptions=fnt_frz_opts) ]
 
-r_fde_mol = adffragmentsjob(frags, basis_set, settings=settings, fde=fnt_act_opts, options=gen_fde_opts).run()
+r_fnt_mol = adffragmentsjob(frags, basis_set, settings=settings, fde=fnt_act_opts, options=gen_fde_opts).run()
 
 results_tot_iso_fde_mol, results_tot_aniso_fde_mol \
-= calculate_nmr_shieldings(frags, r_fde_mol, active_atoms=active_nmr_atoms_index, active_labels=active_nmr_atoms_label, active_coords=active_nmr_atoms_coords, label="FnT mol (mol=active, h2o+env=frozen)", print_active=True)
-
-#     ...the same, but we add ghosts
-#        if not done before, we need to prepare a frozen environment first:
-r_h2oenv_gh = adfsinglepointjob((m_h2o+m_env).add_as_ghosts(m_mol), basis_set, settings=settings, options=gen_sym_opts).run()
-frags_gh = [ fragment(None,  [m_mol.add_as_ghosts(m_h2o+m_env)]), 
-             fragment(r_h2oenv_gh, [(m_h2o+m_env).add_as_ghosts(m_mol)], isfrozen=True, fdeoptions=fnt_frz_opts) ]
-
-r_fde_mol_gh = adffragmentsjob(frags_gh, basis_set, settings=settings, fde=fnt_act_opts, options=gen_fde_opts).run()
-
-results_tot_iso_fde_mol_allenvgh, results_tot_aniso_fde_mol_allenvgh \
-= calculate_nmr_shieldings(frags_gh, r_fde_mol_gh, active_atoms=active_nmr_atoms_index, active_labels=active_nmr_atoms_label, active_coords=active_nmr_atoms_coords, label="FnT mol (mol=active, h2o+env=frozen) with ghosts in h2o+env", print_ghost=True)
+= calculate_nmr_shieldings(frags, r_fnt_mol, active_atoms=active_nmr_atoms_index, active_labels=active_nmr_atoms_label, active_coords=active_nmr_atoms_coords, label="FnT mol (mol=active, h2o+env=frozen)", print_to_output=True)
 
 
 # (2) now exchange subsystems and do FnT calculations on an "environment"
 # if not done before, we need to prepare a frozen environment first:
+
 r_mol  = adfsinglepointjob(m_mol,  basis_set, settings=settings, options=gen_sym_opts).run()
+
 frags = [ fragment(None,  [m_h2o+m_env]), 
           fragment(r_mol, [m_mol], isfrozen=True, fdeoptions=fnt_frz_opts) ]
 
 #     we use this to calculate NICS-type contribution to mol:
-#     so we add pointcharges in mol_nmr_atoms_coords
-r_fde_h2oenv = adffragmentsjob(frags, basis_set, settings=settings, fde=fnt_act_opts, options=gen_fde_opts, pointcharges=mol_nmr_atoms_coords).run()
+r_fnt_h2oenv = adffragmentsjob(frags, basis_set, settings=settings, fde=fnt_act_opts, options=gen_fde_opts).run()
 
 results_tot_iso_fde_allenv_nics_to_mol, results_tot_aniso_fde_allenv_nics_to_mol\
-= calculate_nmr_shieldings(frags, r_fde_h2oenv, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=active_nmr_atoms_coords, label="FnT (active=h2o+env): NICS-like contribution from h2o+env to mol", print_active=True)
-
-#         ...the same, but we add mol as ghosts (so in this case, no need to add pointcharges):
-#            if not done before, we need to prepare a frozen environment first:
-r_mol_gh  = adfsinglepointjob(m_mol.add_as_ghosts(m_h2o+m_env),  basis_set, settings=settings, options=gen_sym_opts).run()
-frags_gh = [ fragment(None,  [(m_h2o+m_env).add_as_ghosts(m_mol)]), 
-             fragment(r_mol_gh, [m_mol.add_as_ghosts(m_h2o+m_env)], isfrozen=True, fdeoptions=fnt_frz_opts) ]
-
-r_fde_h2oenv_gh = adffragmentsjob(frags, basis_set, settings=settings, fde=fnt_act_opts, options=gen_fde_opts).run()
-
-results_tot_iso_fde_nics_to_mol_gh, results_tot_aniso_fde_nics_to_mol_gh\
-= calculate_nmr_shieldings(frags_gh, r_fde_h2oenv_gh, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=active_nmr_atoms_coords, label="FnT (active=h2o+env; with ghosts): NICS-like contribution from h2o+env to mol", print_active=True)
-
+= calculate_nmr_shieldings(frags, r_fnt_h2oenv, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=active_nmr_atoms_coords, label="FnT (active=h2o+env): NICS-like contribution from h2o+env to mol", print_to_output=True)
 
 
 # (3) now we want to calculate NMR for "Hb" so we consider different partitioning:
+
 # if not done before, we need to prepare a frozen environment first:
+
 r_molenv = adfsinglepointjob(m_mol+m_env, basis_set, settings=settings, options=gen_sym_opts).run()
+
 frags = [ fragment(None,  [m_h2o]), 
           fragment(r_molenv, [m_mol+m_env], isfrozen=True, fdeoptions=fnt_frz_opts) ]
 
-r_fde_h2o = adffragmentsjob(frags, basis_set, settings=settings, fde=fnt_act_opts, options=gen_fde_opts).run()
+r_fnt_h2o = adffragmentsjob(frags, basis_set, settings=settings, fde=fnt_act_opts, options=gen_fde_opts).run()
 results_tot_iso_fde_h2o, results_tot_aniso_fde_h2o \
-= calculate_nmr_shieldings(frags, r_fde_h2o, active_atoms=h2o_nmr_atoms_index, active_labels=h2o_nmr_atoms_label, active_coords=h2o_nmr_atoms_coords, label="FnT (active=h2o)", print_active=True)
-
-#     ...the same, but we add all atoms of other molecules as ghosts:
-#        if not done before, we need to prepare a frozen environment first:
-r_molenv_gh = adfsinglepointjob((m_mol+m_env).add_as_ghosts(m_h2o), basis_set, settings=settings, options=gen_sym_opts).run()
-frags = [ fragment(None,  [m_h2o.add_as_ghosts(m_mol+m_env)]), 
-          fragment(r_molenv_gh, [(m_mol+m_env).add_as_ghosts(m_h2o)], isfrozen=True, fdeoptions=fnt_frz_opts) ]
-
-r_fde_h2o_gh = adffragmentsjob(frags, basis_set, settings=settings, fde=fnt_act_opts, options=gen_fde_opts).run()
-
-results_tot_iso_fde_h2o_gh, results_tot_aniso_fde_h2o_gh \
-= calculate_nmr_shieldings(frags, r_fde_h2o_gh, active_atoms=h2o_nmr_atoms_index, active_labels=h2o_nmr_atoms_label, active_coords=h2o_nmr_atoms_coords, label="FnT (active=h2o; with mol+env as ghosts)", print_active=True)
+= calculate_nmr_shieldings(frags, r_fnt_h2o, active_atoms=h2o_nmr_atoms_index, active_labels=h2o_nmr_atoms_label, active_coords=h2o_nmr_atoms_coords, label="FnT (active=h2o)", print_to_output=True)
 
 
 # (4) now exchange subsystems and do FnT calculations on an mol+env
 # if not done before, we need to prepare a frozen environment first:
-r_mol  = adfsinglepointjob(m_mol,  basis_set, settings=settings, options=gen_sym_opts).run()
+r_h2o  = adfsinglepointjob(m_h2o,  basis_set, settings=settings, options=gen_sym_opts).run()
+
 frags = [ fragment(None,  [m_mol+m_env]), 
-          fragment(r_mol, [m_h2o], isfrozen=True, fdeoptions=fnt_frz_opts) ]
+          fragment(r_h2o, [m_h2o], isfrozen=True, fdeoptions=fnt_frz_opts) ]
 
 #     we use this to calculate NICS-type contribution to h2o:
-#     so we add pointcharges in h2o_nmr_atoms_coords
-r_fde_molenv = adffragmentsjob(frags, basis_set, settings=settings, fde=fnt_act_opts, options=gen_fde_opts, pointcharges=h2o_nmr_atoms_coords).run()
+r_fnt_molenv = adffragmentsjob(frags, basis_set, settings=settings, fde=fnt_act_opts, options=gen_fde_opts, pointcharges=h2o_nmr_atoms_coords).run()
 
 results_tot_iso_fde_molenv_nics_to_h2o, results_tot_aniso_fde_molenv_nics_to_h2o \
-= calculate_nmr_shieldings(frags, r_fde_molenv, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=h2o_nmr_atoms_coords, label="FnT (active=mol+env): NICS-like contribution from mol+env to h2o", print_active=True)
-
-#         ...the same, but we add mol as ghosts (so in this case, no need to add pointcharges):
-#            if not done before, we need to prepare a frozen environment first:
-r_mol_gh  = adfsinglepointjob(m_mol.add_as_ghosts(m_h2o+m_env),  basis_set, settings=settings, options=gen_sym_opts).run()
-frags_gh = [ fragment(None,  [(m_mol+m_env).add_as_ghosts(m_h2o)]), 
-             fragment(r_mol_gh, [m_h2o.add_as_ghosts(m_mol+m_env)], isfrozen=True, fdeoptions=fnt_frz_opts) ]
-
-r_fde_molenv_gh = adffragmentsjob(frags, basis_set, settings=settings, fde=fnt_act_opts, options=gen_fde_opts).run()
-
-results_tot_iso_fde_molenv_nics_to_h2o_gh, results_tot_aniso_fde_molenv_nics_to_h2o_gh \
-= calculate_nmr_shieldings(frags_gh, r_fde_molenv_gh, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=h2o_nmr_atoms_coords, label="FnT (active=mol+env; with ghosts): NICS-like contribution from mol+env to h2o", print_active=True)
+= calculate_nmr_shieldings(frags, r_fnt_molenv, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=h2o_nmr_atoms_coords, label="FnT (active=mol+env): NICS-like contribution from mol+env to h2o", print_to_output=True)
 
 
-# (5) more complex scheme could be to do calculations on 3 fragmens: 
-#     mol as an "active" subsystem, h2o as frozen and relaxed, env as frozen:
+# (5) more complex scheme could be to do calculations on 3 fragments: 
+#     "mol" as an active subsystem, "h2o" as relaxed, "env" as frozen:
 
 #     if not done before, we need to prepare a frozen environment first:
 r_h2o = adfsinglepointjob(m_h2o, basis_set, settings=settings, options=gen_sym_opts).run()
 r_env = adfsinglepointjob(m_env, basis_set, settings=settings, options=gen_sym_opts).run()
+
 frags = [ fragment(None,  [m_mol]), 
           fragment(r_h2o, [m_h2o], isfrozen=True, fdeoptions=fnt_frz_opts),
           fragment(r_env, [m_env], isfrozen=True, fdeoptions=fde_frz_opts) ]
 
-r_fde_mol_3frags = adffragmentsjob(frags, basis_set, settings=settings, fde=fnt_act_opts, options=gen_fde_opts).run()
+r_fnt_mol_3frags = adffragmentsjob(frags, basis_set, settings=settings, fde=fnt_act_opts, options=gen_fde_opts).run()
 
 results_tot_iso_fde_mol_3frags, results_tot_aniso_fde_mol_3frags \
-= calculate_nmr_shieldings(frags, r_fde_mol_3frags, active_atoms=active_nmr_atoms_index, active_labels=active_nmr_atoms_label, active_coords=active_nmr_atoms_coords, label="FnT mol (mol=active, h2o=frozen and relaxed, env=frozen)", print_active=True)
-
-#     ...the same, but we add ghosts
-#        if not done before, we need to prepare a frozen environment first:
-r_h2o_gh = adfsinglepointjob(m_h2o.add_as_ghosts(m_mol+m_env), basis_set, settings=settings, options=gen_sym_opts).run()
-r_env_gh = adfsinglepointjob(m_env.add_as_ghosts(m_mol+m_h2o), basis_set, settings=settings, options=gen_sym_opts).run()
-frags_gh = [ fragment(None,  [m_mol.add_as_ghosts(m_h2o+m_env)]), 
-             fragment(r_h2o_gh, [m_h2o.add_as_ghosts(m_mol+m_env)], isfrozen=True, fdeoptions=fnt_frz_opts),
-             fragment(r_env_gh, [m_env.add_as_ghosts(m_mol+m_h2o)], isfrozen=True, fdeoptions=fde_frz_opts) ]
-
-r_fde_mol_gh_3frags = adffragmentsjob(frags_gh, basis_set, settings=settings, fde=fnt_act_opts, options=gen_fde_opts).run()
-
-results_tot_iso_fde_mol_allenvgh_3frags, results_tot_aniso_fde_mol_allenvgh_3frags \
-= calculate_nmr_shieldings(frags_gh, r_fde_mol_gh, active_atoms=active_nmr_atoms_index, active_labels=active_nmr_atoms_label, active_coords=active_nmr_atoms_coords, label="FnT mol (mol=active, h2o=frozen and relaxed, env=frozen) with ghosts in h2o+env", print_ghost=True)
-
-
-
-
-#
-# At this stage, we can already assess various differences and solvent shifts; examples:
-#
-
-for i in active_nmr_atoms_index:
-
-    nuc = active_nmr_atoms_label[i-1]
-    coords = m_mol.get_coordinates()[i-1]
-    x = str(coords[0])
-    y = str(coords[1])
-    z = str(coords[2])
-    k = x+", "+y+", "+z
-
-    delta1 = results_tot_iso_super[k] - (results_tot_iso_fde_mol[k] + results_tot_iso_fde_allenv_nics_to_mol[k])
-    delta2 = results_tot_iso_super[k] - (results_tot_iso_fde_mol_allenvgh[k] + results_tot_iso_fde_nics_to_mol_gh[k])
-    delta3 = results_tot_iso_fde_mol_allenvgh[k] - results_tot_iso_fde_mol[k]
-    delta4 = results_tot_iso_fde_nics_to_mol_gh[k] - results_tot_iso_fde_nics_to_mol[k]
-
-    print("Solvent shifts evaluated for nuclei of active mol at FnT level; environment is h2o+env")
-    print("BSSE correction on the isotropic shielding of nucleus {} at {} from fde mol is {:.3f}".format(nuc,k,delta3))
-    print("BSSE correction on the isotropic shielding of nucleus {} at {} from entire environment (NICS-type) is {:.3f}".format(nuc,k,delta4))
-    print("Total BSSE correction on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta3+delta4))
-    print("FnT solvent shift on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta1))
-    print("FnT solvent shift, BSSE-corrected, on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta2))
-   
-
-    delta5 = results_tot_aniso_super[k] - (results_tot_aniso_fde_mol[k] + results_tot_aniso_fde_allenv_nics_to_mol[k])
-    delta6 = results_tot_aniso_super[k] - (results_tot_aniso_fde_mol_allenvgh[k] + results_tot_aniso_fde_nics_to_mol_gh[k])
-    delta7 = results_tot_aniso_fde_mol_allenvgh[k] - results_tot_aniso_fde_mol[k]
-    delta8 = results_tot_aniso_fde_nics_to_mol_gh[k] - results_tot_aniso_fde_nics_to_mol[k]
-
-    print("Solvent shifts evaluated for nuclei of active mol at FnT level; environment is h2o+env")
-    print("BSSE correction on the anisotropic shielding of nucleus {} at {} from fde mol is {:.3f}".format(nuc,k,delta7))
-    print("BSSE correction on the anisotropic shielding of nucleus {} at {} from entire environment (NICS-type) is {:.3f}".format(nuc,k,delta8))
-    print("Total BSSE correction on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta7+delta8))
-    print("FnT solvent shift on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta5))
-    print("FnT solvent shift, BSSE-corrected, on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta6))
-   
-for i in h2o_nmr_atoms_index:
-
-    nuc = h2o_nmr_atoms_label[i-1]
-    coords = m_mol.get_coordinates()[i-1]
-    x = str(coords[0])
-    y = str(coords[1])
-    z = str(coords[2])
-    k = x+", "+y+", "+z
-    print("TESTME2: ", i, nuc, coords, k, x, y, z)
-
-    delta1 = results_tot_iso_super[k] - (results_tot_iso_fde_h2o[k] + results_tot_iso_fde_molenv_nics_to_h2o[k])
-    delta2 = results_tot_iso_super[k] - (results_tot_iso_fde_h2o_allothergh[k] + results_tot_iso_fde_molenv_nics_to_h2o_gh[k])
-    delta3 = results_tot_iso_fde_h2o_allothergh[k] - results_tot_iso_fde_h2o[k]
-    delta4 = results_tot_iso_fde_molenv_nics_to_h2o_gh[k] - results_tot_iso_fde_molenv_nics_to_h2o[k]
-
-    print("Solvent shifts evaluated for nuclei of h2o at FnT level; environment is mol+env")
-    print("BSSE correction on the isotropic shielding of nucleus {} at {} from fde h2o is {:.3f}".format(nuc,k,delta3))
-    print("BSSE correction on the isotropic shielding of nucleus {} at {} from entire environment (NICS-type) is {:.3f}".format(nuc,k,delta4))
-    print("Total BSSE correction on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta3+delta4))
-    print("FnT solvent shift on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta1))
-    print("FnT solvent shift, BSSE-corrected, on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta2))
-   
-
-    delta5 = results_tot_aniso_super[k] - (results_tot_aniso_fde_h2o[k] + results_tot_aniso_fde_molenv_nics_to_h2o[k])
-    delta6 = results_tot_aniso_super[k] - (results_tot_aniso_fde_h2o_allothergh[k] + results_tot_aniso_fde_molenv_nics_to_h2o_gh[k])
-    delta7 = results_tot_aniso_fde_h2o_allothergh[k] - results_tot_aniso_fde_h2o[k]
-    delta8 = results_tot_aniso_fde_molenv_nics_to_h2o_gh[k] - results_tot_aniso_fde_molenv_nics_to_h2o[k]
-
-    print("Solvent shifts evaluated for nuclei of h2o at FnT level; environment is mol+env")
-    print("BSSE correction on the anisotropic shielding of nucleus {} at {} from fde h2o is {:.3f}".format(nuc,k,delta7))
-    print("BSSE correction on the anisotropic shielding of nucleus {} at {} from entire environment (NICS-type) is {:.3f}".format(nuc,k,delta8))
-    print("Total BSSE correction on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta7+delta8))
-    print("FnT solvent shift on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta5))
-    print("FnT solvent shift, BSSE-corrected, on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta6))
-   
-
+= calculate_nmr_shieldings(frags, r_fnt_mol_3frags, active_atoms=active_nmr_atoms_index, active_labels=active_nmr_atoms_label, active_coords=active_nmr_atoms_coords, label="FnT mol (mol=active, h2o=frozen and relaxed, env=frozen)", print_to_output=True)
 
 
