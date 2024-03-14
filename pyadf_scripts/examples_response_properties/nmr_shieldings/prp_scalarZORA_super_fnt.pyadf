@@ -330,7 +330,7 @@ frags = [ fragment(None,  [m_mol+m_env]),
           fragment(r_h2o, [m_h2o], isfrozen=True, fdeoptions=fnt_frz_opts) ]
 
 #     we use this to calculate NICS-type contribution to h2o:
-r_fnt_molenv = adffragmentsjob(frags, basis_set, settings=settings, fde=fnt_act_opts, options=gen_fde_opts, pointcharges=h2o_nmr_atoms_coords).run()
+r_fnt_molenv = adffragmentsjob(frags, basis_set, settings=settings, fde=fnt_act_opts, options=gen_fde_opts).run()
 
 results_tot_iso_fde_molenv_nics_to_h2o, results_tot_aniso_fde_molenv_nics_to_h2o \
 = calculate_nmr_shieldings(frags, r_fnt_molenv, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=h2o_nmr_atoms_coords, label="FnT (active=mol+env): NICS-like contribution from mol+env to h2o", print_to_output=True)
