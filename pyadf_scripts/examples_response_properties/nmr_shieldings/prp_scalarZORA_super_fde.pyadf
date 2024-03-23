@@ -2,14 +2,13 @@
 # This example shows how to calculate the NMR shielding tensor in ADF via pyadf.
 # It demonstrates:
 # * how to play with different partitioning schemes (selection of subsystems)
-# * how to calculate NMR with and without FDE
-# * how to do freeze-and-thaw cycles
+# * how to calculate NMR with FDE
 #
 # Note that in "real" examples, you might need to split this script into few
 # so that you have enough CPU for each task
 #
 #
-# last. rev. Gosia Olejniczak, 14/03/2024
+# last. rev. Gosia Olejniczak, 23/03/2024
 #
 
 
@@ -81,9 +80,9 @@ def calculate_nmr_shieldings(molecule, results, active_atoms=None, active_labels
                 print( "## Shielding_iso_dia   : ("+label+") :", dia_iso )
                 print( "## Shielding_iso_total : ("+label+") :", tot_iso )
                 print( "\n" )
-                print( "@@ Shielding_aniso_para  : ("+label+") :", para_aniso )
-                print( "@@ Shielding_aniso_dia   : ("+label+") :", dia_aniso )
-                print( "@@ Shielding_aniso_total : ("+label+") :", tot_aniso )
+                print( "## Shielding_aniso_para  : ("+label+") :", para_aniso )
+                print( "## Shielding_aniso_dia   : ("+label+") :", dia_aniso )
+                print( "## Shielding_aniso_total : ("+label+") :", tot_aniso )
                 print( "\n" )
 
             results_para_iso[coords] = para_iso
@@ -277,6 +276,15 @@ basis_frz = basis_set
 #       and we focus on NMR of:
 #         * "C" and "N" in m_mol
 #         * "H" in m_h2o involved in H-bond ("Hb")
+#
+# Note:  these calculations do not need BSSE 
+#        correction, as we are doing them on 
+#        'full' supermolecular grids (option 'FULLGRID');
+#        But this can be expensive for large systems; 
+#        so in cases where we do not use 'FULLGRID',
+#        we might evaluate the BSSE correction based
+#        on supermolecular-isolated calculations 
+#        (if those are already done)
 # ------------------------------------------------
 
 # (1) mol as an "active" subsystem, h2o+env as a frozen environment
@@ -333,83 +341,3 @@ r_fde_molenv = adffragmentsjob(frags, basis_set, settings=settings, fde=fde_act_
 results_tot_iso_fde_molenv_nics_to_h2o, results_tot_aniso_fde_molenv_nics_to_h2o \
 = calculate_nmr_shieldings(frags, r_fde_molenv, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=h2o_nmr_atoms_coords, label="FDE (active=mol+env): NICS-like contribution from mol+env to h2o", print_to_output=True)
 
-###------------------------------------------------------------------------------------------#
-### At this stage, we can already assess various differences and solvent shifts; examples:
-### NOTE: this needs to be adapted;
-### e.g. now, I am not re-running calculations on supermolecule to save time
-###------------------------------------------------------------------------------------------#
-##
-##for i in active_nmr_atoms_index:
-##
-##    nuc = active_nmr_atoms_label[i-1]
-##    coords = m_mol.get_coordinates()[i-1]
-##    x = str(coords[0])
-##    y = str(coords[1])
-##    z = str(coords[2])
-##    k = x+", "+y+", "+z
-##
-##    delta1 = results_tot_iso_super[k] - (results_tot_iso_fde_mol[k] + results_tot_iso_fde_allenv_nics_to_mol[k])
-##    delta2 = results_tot_iso_super[k] - (results_tot_iso_fde_mol_allenvgh[k] + results_tot_iso_fde_nics_to_mol_gh[k])
-##    delta3 = results_tot_iso_fde_mol_allenvgh[k] - results_tot_iso_fde_mol[k]
-##    delta4 = results_tot_iso_fde_nics_to_mol_gh[k] - results_tot_iso_fde_nics_to_mol[k]
-##
-##    print("--------------------------------------------------------------------------------------")
-##    print("Solvent shifts evaluated for nuclei of active mol at FDE level; environment is h2o+env")
-##    print("--------------------------------------------------------------------------------------")
-##    print("BSSE correction on the isotropic shielding of nucleus {} at {} from fde mol is {:.3f}".format(nuc,k,delta3))
-##    print("BSSE correction on the isotropic shielding of nucleus {} at {} from entire environment (NICS-type) is {:.3f}".format(nuc,k,delta4))
-##    print("Total BSSE correction on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta3+delta4))
-##    print("FDE solvent shift on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta1))
-##    print("FDE solvent shift, BSSE-corrected, on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta2))
-##    print("\n")
-##   
-##
-##    delta5 = results_tot_aniso_super[k] - (results_tot_aniso_fde_mol[k] + results_tot_aniso_fde_allenv_nics_to_mol[k])
-##    delta6 = results_tot_aniso_super[k] - (results_tot_aniso_fde_mol_allenvgh[k] + results_tot_aniso_fde_nics_to_mol_gh[k])
-##    delta7 = results_tot_aniso_fde_mol_allenvgh[k] - results_tot_aniso_fde_mol[k]
-##    delta8 = results_tot_aniso_fde_nics_to_mol_gh[k] - results_tot_aniso_fde_nics_to_mol[k]
-##
-##    print("BSSE correction on the anisotropic shielding of nucleus {} at {} from fde mol is {:.3f}".format(nuc,k,delta7))
-##    print("BSSE correction on the anisotropic shielding of nucleus {} at {} from entire environment (NICS-type) is {:.3f}".format(nuc,k,delta8))
-##    print("Total BSSE correction on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta7+delta8))
-##    print("FDE solvent shift on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta5))
-##    print("FDE solvent shift, BSSE-corrected, on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta6))
-##    print("\n")
-##   
-##for i in h2o_nmr_atoms_index:
-##
-##    nuc = h2o_nmr_atoms_label[i-1]
-##    coords = m_mol.get_coordinates()[i-1]
-##    x = str(coords[0])
-##    y = str(coords[1])
-##    z = str(coords[2])
-##    k = x+", "+y+", "+z
-##
-##    delta1 = results_tot_iso_super[k] - (results_tot_iso_fde_h2o[k] + results_tot_iso_fde_molenv_nics_to_h2o[k])
-##    delta2 = results_tot_iso_super[k] - (results_tot_iso_fde_h2o_allothergh[k] + results_tot_iso_fde_molenv_nics_to_h2o_gh[k])
-##    delta3 = results_tot_iso_fde_h2o_allothergh[k] - results_tot_iso_fde_h2o[k]
-##    delta4 = results_tot_iso_fde_molenv_nics_to_h2o_gh[k] - results_tot_iso_fde_molenv_nics_to_h2o[k]
-##
-##    print("-------------------------------------------------------------------------------")
-##    print("Solvent shifts evaluated for nuclei of h2o at FDE level; environment is mol+env")
-##    print("-------------------------------------------------------------------------------")
-##    print("BSSE correction on the isotropic shielding of nucleus {} at {} from fde h2o is {:.3f}".format(nuc,k,delta3))
-##    print("BSSE correction on the isotropic shielding of nucleus {} at {} from entire environment (NICS-type) is {:.3f}".format(nuc,k,delta4))
-##    print("Total BSSE correction on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta3+delta4))
-##    print("FDE solvent shift on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta1))
-##    print("FDE solvent shift, BSSE-corrected, on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta2))
-##    print("\n")
-##   
-##
-##    delta5 = results_tot_aniso_super[k] - (results_tot_aniso_fde_h2o[k] + results_tot_aniso_fde_molenv_nics_to_h2o[k])
-##    delta6 = results_tot_aniso_super[k] - (results_tot_aniso_fde_h2o_allothergh[k] + results_tot_aniso_fde_molenv_nics_to_h2o_gh[k])
-##    delta7 = results_tot_aniso_fde_h2o_allothergh[k] - results_tot_aniso_fde_h2o[k]
-##    delta8 = results_tot_aniso_fde_molenv_nics_to_h2o_gh[k] - results_tot_aniso_fde_molenv_nics_to_h2o[k]
-##
-##    print("BSSE correction on the anisotropic shielding of nucleus {} at {} from fde h2o is {:.3f}".format(nuc,k,delta7))
-##    print("BSSE correction on the anisotropic shielding of nucleus {} at {} from entire environment (NICS-type) is {:.3f}".format(nuc,k,delta8))
-##    print("Total BSSE correction on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta7+delta8))
-##    print("FDE solvent shift on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta5))
-##    print("FDE solvent shift, BSSE-corrected, on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta6))
-##    print("\n")
-##   

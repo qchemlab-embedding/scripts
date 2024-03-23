@@ -81,9 +81,9 @@ def calculate_nmr_shieldings(molecule, results, active_atoms=None, active_labels
                 print( "## Shielding_iso_dia   : ("+label+") :", dia_iso )
                 print( "## Shielding_iso_total : ("+label+") :", tot_iso )
                 print( "\n" )
-                print( "@@ Shielding_aniso_para  : ("+label+") :", para_aniso )
-                print( "@@ Shielding_aniso_dia   : ("+label+") :", dia_aniso )
-                print( "@@ Shielding_aniso_total : ("+label+") :", tot_aniso )
+                print( "## Shielding_aniso_para  : ("+label+") :", para_aniso )
+                print( "## Shielding_aniso_dia   : ("+label+") :", dia_aniso )
+                print( "## Shielding_aniso_total : ("+label+") :", tot_aniso )
                 print( "\n" )
 
             results_para_iso[coords] = para_iso
@@ -241,8 +241,8 @@ for i in super_nmr_atoms_index:
 
 # general settings for FDE - adapt as needed:
 
-fde_nadd_kin = 'PW91K'    # choose the potential for the non-additive kinetic part of interaction energy
-max_fnt_cycles = 10       # choose the maximum number of freeze-and-thaw cycles
+fde_nadd_kin = 'PW91K'    # here you can choose the potential for the non-additive kinetic part of interaction energy (this default is OK)
+max_fnt_cycles = 10       # choose the maximum number of freeze-and-thaw cycles (usually 10 is largely enough)
 save_potentials_densities = False
 
 fde_exc_opts = ['QTENS', 'ALLOW POSHOMO']
