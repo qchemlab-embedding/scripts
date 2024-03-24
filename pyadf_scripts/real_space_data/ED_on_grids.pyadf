@@ -1,0 +1,175 @@
+#
+# This example shows how to export various densities and potentials from ADF calculations;
+# can be used as analysis tools accompanying other ADF calculations
+#
+# last. rev. Gosia Olejniczak, 19/03/2024
+#
+
+
+import shutil
+import time
+
+
+# -----
+# setup
+# -----
+
+# adapt this path to your directory in $PLG_GROUPS_STORAGE/plggqcembed/
+data_dir='/net/pr2/projects/plgrid/plggqcembed/gosia-storage/pyadf/tests/pyadf_scripts/real_space_data'
+
+if not os.path.exists(data_dir):
+    os.makedirs(data_dir)
+
+# do not change this:
+from pyadf import *
+if 'pyadfenv' not in globals():
+    from pyadf.Initialization import *
+
+DefaultJobRunner.instance = None
+job_runner_conf = JobRunnerConfiguration(conffile='/net/pr2/projects/plgrid/plggqcembed/devel/tools/pyadf-jobrunner.conf',
+                                         jobbasedir=pyadfenv.outdir)
+DefaultJobRunner(conf=job_runner_conf)
+
+# adapt molecular data:
+# here: play with partitioning schemes:
+geometries_dir = os.path.join(pyadfenv.outdir, 'coordinates')
+file_mol  = os.path.join(geometries_dir, 'an.xyz')
+file_h2o  = os.path.join(geometries_dir, 'solvent0.xyz')
+file_env1 = os.path.join(geometries_dir, 'solvent1.xyz')
+file_env2 = os.path.join(geometries_dir, 'solvent2.xyz')
+file_env3 = os.path.join(geometries_dir, 'solvent3.xyz')
+m_mol  = molecule(file_mol)
+m_h2o  = molecule(file_h2o)
+m_env1 = molecule(file_env1)
+m_env2 = molecule(file_env2)
+m_env3 = molecule(file_env3)
+# also: group "m_envX" molecules into "m_env":
+m_e = []
+for i in range(1,4):
+    m = molecule(os.path.join(geometries_dir, f'solvent{i:d}.xyz'))
+    m_e.append(m)
+m_env = sum(m_e)
+# ...and entire supermolecule:
+m_tot = m_mol + m_h2o + m_env1 + m_env2 + m_env3
+
+# if a system is charged, then remember to set it up 
+#charge_mol=0
+#m_mol.set_charge(charge_mol)
+#m_tot.set_charge(charge_mol)
+
+# ask the program not to identify molecular symmetry
+m_mol.set_symmetry('NOSYM')
+m_h2o.set_symmetry('NOSYM')
+m_env1.set_symmetry('NOSYM')
+m_env2.set_symmetry('NOSYM')
+m_env3.set_symmetry('NOSYM')
+m_env.set_symmetry('NOSYM')
+m_tot.set_symmetry('NOSYM')
+
+print('Coordinates of all (sub)systems:')
+print('mol:')
+print(m_mol.print_coordinates())
+print('h2o:')
+print(m_h2o.print_coordinates())
+print('env1:')
+print(m_env1.print_coordinates())
+print('env2:')
+print(m_env2.print_coordinates())
+print('env3:')
+print(m_env3.print_coordinates())
+print('entire environment:')
+print((m_h2o+m_env).print_coordinates())
+print('entire system:')
+print(m_tot.print_coordinates())
+
+
+# general settings for ADF job - adapt these as needed:
+# search in pyadf code to find out what they mean 
+
+settings = adfsettings()
+
+settings.set_ZORA(ZORA=True, SpinOrbit=False)
+settings.set_unrestricted(False)
+settings.set_functional('PBE')                 # choose DFT functional
+basis_set = "DZP"                              # choose the basis set
+
+# these settings can be left as they are:
+settings.ncycles=1000                     
+settings.set_integration(accint=8.0, acclist=[8.0, 8.0])
+settings.set_dependency(True)
+settings.set_exactdensity(True)
+settings.set_save_tapes([21,10,41])
+settings.set_occupations(['KEEPORBITALS '+str(settings.ncycles)])
+gen_sym_opts = ['NOSYM', 'NOSYMFIT', 'NUCLEARMODEL gaussian']
+
+
+# ------------------------------------------------------------------
+# run calculations on an entire system ("supermolecular" reference):
+# ------------------------------------------------------------------
+
+r_tot  = adfsinglepointjob(m_tot,  basis_set, settings=settings, options=gen_sym_opts).run()
+
+# --- define/get grids ---
+# regular grid (this spacing and border usually works well)
+cgrid = cubegrid(r_tot.get_molecule(), spacing=0.05, border=2.0)
+# additionally, get bond energy: 
+bond_energy_tot = r_tot.get_bond_energy()
+print("Total Bond Energy in supermolecule [a.u.]", bond_energy_tot)
+
+# export electron density on a regular grid ("supermolecular grid"):
+# Note: data will be saved in "data_dir" - adapt it to your needs, 
+# but do not use directories or copy it back to $HOME, as these csv files will
+# be large and you will quickly run out of $HOME space on Ares
+dens_cgrid_super = r_tot.get_density(grid=cgrid)
+dens_cgrid_super.get_xyzvfile(os.path.join(data_dir, 'dens_cgrid_super.csv'))
+
+
+# ------------------------------------------------
+# run calculations on isolated subsystems (no FDE)
+# ------------------------------------------------
+
+# (1) mol: NMR of C and N in an isolated mol
+r_mol  = adfsinglepointjob(m_mol,  basis_set, settings=settings, options=gen_sym_opts).run()
+
+# export electron density on a regular grid (note - we use supermolecular grid):
+dens_cgrid_mol = r_mol.get_density(grid=cgrid)
+dens_cgrid_mol.get_xyzvfile(os.path.join(data_dir, 'dens_cgrid_mol.csv'))
+
+# additionally, get bond energy: 
+bond_energy_mol = r_mol.get_bond_energy()
+print("Total Bond Energy in isolated mol [a.u.]", bond_energy_mol)
+
+# (2) h2o: NMR of "Hb" in an isolated h2o
+r_h2o = adfsinglepointjob(m_h2o, basis_set, settings=settings, options=gen_sym_opts).run()
+
+# export electron density on a regular grid (note - we use supermolecular grid):
+dens_cgrid_h2o = r_h2o.get_density(grid=cgrid)
+dens_cgrid_h2o.get_xyzvfile(os.path.join(data_dir, 'dens_cgrid_h2o.csv'))
+
+# additionally, get bond energy: 
+bond_energy_h2o = r_h2o.get_bond_energy()
+print("Total Bond Energy in isolated h2o [a.u.]", bond_energy_h2o)
+
+# ------------------------------------------------
+# this shows that it is possible to combine
+# the densities, e.g., to export 
+# density differences you can do:
+# ------------------------------------------------
+diff_dens = dens_cgrid_super - (dens_cgrid_mol + dens_cgrid_h2o)
+diff_dens.get_xyzvfile(os.path.join(data_dir, 'diff_dens_cgrid_super-molh2o_isolated.csv'))
+
+# ------------------------------------------------
+# Additionally, we estimate the interaction energy
+# note - energy was evaluated based on calcs
+# done on ADF numerical grids (which are different
+# than cube grids we use for visualization);
+# also, these grids are tailored to each sub and 
+# this example does not apply the BSSE correction
+# this is to say, that there is no 1-1 correspondence
+# between "int_en" and similar interaction energy that
+# could be inferred from "diff_dens";
+# nevertheless, it is some evaluation that we get "for free"
+# ------------------------------------------------
+int_en = bond_energy_tot - (bond_energy_mol + bond_energy_h2o)
+print("Interaction energy from supermolecular calc (based on Total Bond Energy, no BSSE correction; [a.u.]): ", int_en)
+

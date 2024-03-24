@@ -182,8 +182,9 @@ print(m_tot.print_coordinates())
 
 settings = adfsettings()
 
-settings.set_ZORA(ZORA=True, SpinOrbit=False)
+settings.set_ZORA(ZORA=True, SpinOrbit=True)
 settings.set_unrestricted(False)
+settings.set_noncollinear(True)
 settings.set_functional('PBE')                 # choose DFT functional
 basis_set = "DZP"                              # choose the basis set
 
@@ -237,6 +238,7 @@ for i in super_nmr_atoms_index:
 
 
 # (2) setup of NMR job is done in calculate_nmr_shieldings function
+
 
 
 # ------------------------------------------------------------------
