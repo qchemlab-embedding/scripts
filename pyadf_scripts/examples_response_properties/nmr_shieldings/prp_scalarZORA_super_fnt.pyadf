@@ -2,14 +2,13 @@
 # This example shows how to calculate the NMR shielding tensor in ADF via pyadf.
 # It demonstrates:
 # * how to play with different partitioning schemes (selection of subsystems)
-# * how to calculate NMR with and without FDE
-# * how to do freeze-and-thaw cycles
+# * how to calculate NMR with FDE and freeze-and-thaw cycles ("FnT")
 #
 # Note that in "real" examples, you might need to split this script into few
 # so that you have enough CPU for each task
 #
 #
-# last. rev. Gosia Olejniczak, 14/03/2024
+# last. rev. Gosia Olejniczak, 23/03/2024
 #
 
 
@@ -81,9 +80,9 @@ def calculate_nmr_shieldings(molecule, results, active_atoms=None, active_labels
                 print( "## Shielding_iso_dia   : ("+label+") :", dia_iso )
                 print( "## Shielding_iso_total : ("+label+") :", tot_iso )
                 print( "\n" )
-                print( "@@ Shielding_aniso_para  : ("+label+") :", para_aniso )
-                print( "@@ Shielding_aniso_dia   : ("+label+") :", dia_aniso )
-                print( "@@ Shielding_aniso_total : ("+label+") :", tot_aniso )
+                print( "## Shielding_aniso_para  : ("+label+") :", para_aniso )
+                print( "## Shielding_aniso_dia   : ("+label+") :", dia_aniso )
+                print( "## Shielding_aniso_total : ("+label+") :", tot_aniso )
                 print( "\n" )
 
             results_para_iso[coords] = para_iso
@@ -277,6 +276,15 @@ basis_frz = basis_set
 #       and we focus on NMR of:
 #         * "C" and "N" in m_mol
 #         * "H" in m_h2o involved in H-bond ("Hb")
+#
+# Note:  these calculations do not need BSSE 
+#        correction, as we are doing them on 
+#        'full' supermolecular grids (option 'FULLGRID');
+#        But this can be expensive for large systems; 
+#        so in cases where we do not use 'FULLGRID',
+#        we might evaluate the BSSE correction based
+#        on supermolecular-isolated calculations 
+#        (if those are already done)
 # ------------------------------------------------
 
 # (1) mol as an "active" subsystem, h2o+env as a frozen environment
