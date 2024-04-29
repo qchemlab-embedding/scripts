@@ -10,10 +10,10 @@
 #SBATCH --error="error.err"
 
 # select one of these to test:
-project=prp_scalarZORA_super_isolated
+#project=prp_scalarZORA_super_isolated
 #project=prp_scalarZORA_super_fnt
 #project=prp_scalarZORA_super_fde
-#project=prp_soZORA_super_isolated
+project=prp_soZORA_super_isolated
 #project=prp_soZORA_super_fnt
 
 # adapt your data_dir
