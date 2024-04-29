@@ -233,6 +233,7 @@ for i in super_nmr_atoms_index:
 # now,  we demonstrate how to calculate the NMR shielding of the selected nuclei in an entire system:
 #
 # - by running calculations on the entire system explicitly ("supermolecular" calculations) -> see (1) below
+#
 # - by running calculations on isolated subsystems and using the results to approximate this "explicit" value
 #   - in this case, we use the geometries of the "isolated" subsystems as cut out from the supermolecule
 #   - we do not add FDE contributions
@@ -246,20 +247,19 @@ for i in super_nmr_atoms_index:
 #       m_tot = m_mol + m_h2o + m_env
 #
 #       then, if we are interested in evaluating the NMR shielding of a nucleus X ("sX") in an entire system,
-#       we need to take into account the contributions from all the subsystems:
+#       we should take into account the contributions from all the subsystems:
 #
 #       sX(in "m_tot") = sX(in "m_mol") + sX(in "m_h2o") + sX(in "m_env")
 #
 #       of course, X belongs to only one of "m_mol", "m_h2o" , "m_env";
-#
-#       Q: how to evaluate sX if X does not belong to a particular subsystem (e.g., here: N does not belong to "m_h2o")?
-#       A: we can evaluate the corresponding contribution in a "NICS-way";
+#       then, the question is how to evaluate sX(in "Y") if "X" does not belong to "Y" (e.g., here: N does not belong to "m_h2o");
+#       one possibility is to evaluate sX(in "Y") in a "NICS-way":
 #       e.g., to evaluate the contribution to sN from "m_h2o", we apply the magnetic field perturbation to "m_h2o"
 #       and probe it with the magnetic dipole of N; in practice, this is done by running NMR job on "m_h2o" with ghost
 #       centers placed in N 
 #
-#       Another issue is that composing the results in a "supermolecular approach" raises concerns about BSSE, double-counting etc.
-#       To address these, in each calculation, we consider two approaches: with and without other subsystems present as "ghosts";
+#       Another issue is that composing the results in a "supermolecular approach" raises concerns about "BSSE"-type errors.
+#       To address such issues, in each calculation, we consider two approaches: with and without other subsystems present as "ghosts";
 #
 # ---------------------------------------------------------------------------------------------------------------------
 
@@ -295,7 +295,7 @@ for i, ind in enumerate(super_nmr_atoms_index):
 
 r_mol  = adfsinglepointjob(m_mol,  basis_set, settings=settings, options=gen_sym_opts).run()
 
-results_iso_from_isolated_mol_to_mol, results_aniso_from_isolated_mol_to_mol \
+r1_iso, r1_aniso \
 = calculate_nmr_shieldings(m_mol, r_mol, active_atoms=active_nmr_atoms_index, active_labels=active_nmr_atoms_label, active_coords=active_nmr_atoms_coords, label="isolated mol", print_to_output=True)
 
 # do the calculations on sub2="m_h2o"+"m_env"
@@ -304,7 +304,7 @@ r_allenv_pc = adfsinglepointjob(m_h2o+m_env, basis_set, settings=settings, optio
 
 # in this case, the contribution from sub2 to their NMR shieldings is calculated in a "NICS-way";
 # "ghost_coords" are placed in the position of C and N:
-results_iso_from_isolated_allenv_to_mol, results_aniso_from_isolated_allenv_to_mol \
+r2_iso, r2_aniso \
 = calculate_nmr_shieldings(m_h2o+m_env, r_allenv_pc, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=active_nmr_atoms_coords, label="isolated allenv: NICS-like contribution from allenv to mol", print_to_output=True)
 
 
@@ -319,14 +319,14 @@ for i, ind in enumerate(active_nmr_atoms_index):
     z = str(coords[2])
     k = x+", "+y+", "+z
 
-    r1 = results_iso_from_isolated_mol_to_mol[k]
-    r2 = results_iso_from_isolated_allenv_to_mol[k]
+    r1 = r1_iso[k]
+    r2 = r2_iso[k]
     print("The isotropic shielding of nucleus {} placed at {} from calculations on isolated sub1(mol) is {:.3f}".format(nuc,k,r1))
     print("The isotropic shielding of nucleus {} placed at {} from calculations on isolated sub2(allenv) - NICS-type contribution -  is {:.3f}".format(nuc,k,r2))
     print("The total isotropic shielding of nucleus {} placed at {} estimated as a sum of results for isolated subsystems is {:.3f}".format(nuc,k,r1+r2))
 
-    r1 = results_aniso_from_isolated_mol_to_mol[k]
-    r2 = results_aniso_from_isolated_allenv_to_mol[k]
+    r1 = r1_aniso[k]
+    r2 = r2_aniso[k]
     print("The anisotropic shielding of nucleus {} placed at {} from calculations on isolated sub1(mol) is {:.3f}".format(nuc,k,r1))
     print("The anisotropic shielding of nucleus {} placed at {} from calculations on isolated sub2(allenv) - NICS-type contribution - is {:.3f}".format(nuc,k,r2))
     print("The total anisotropic shielding of nucleus {} placed at {} estimated as a sum of results for isolated subsystems is {:.3f}".format(nuc,k,r1+r2))
@@ -338,7 +338,7 @@ for i, ind in enumerate(active_nmr_atoms_index):
 # do the calculations on sub1="m_mol" with ghosts on atoms from other molecules:
 r_mol_gh  = adfsinglepointjob(m_mol.add_as_ghosts(m_h2o+m_env),  basis_set, settings=settings, options=gen_sym_opts).run()
 
-results_iso_from_isolated_mol_to_mol_gh, results_aniso_from_isolated_mol_to_mol_gh \
+r1_iso_gh, r1_aniso_gh \
 = calculate_nmr_shieldings(m_mol.add_as_ghosts(m_h2o+m_env), r_mol_gh, active_atoms=active_nmr_atoms_index, active_labels=active_nmr_atoms_label, active_coords=active_nmr_atoms_coords, label="isolated mol with allenv as ghosts", print_to_output=True)
 
 # do the calculations on sub2="m_h2o"+"m_env"
@@ -347,7 +347,7 @@ results_iso_from_isolated_mol_to_mol_gh, results_aniso_from_isolated_mol_to_mol_
 r_allenv_gh = adfsinglepointjob((m_h2o+m_env).add_as_ghosts(m_mol), basis_set, settings=settings, options=gen_sym_opts).run()
 
 # in this case, the contribution from sub2 to their NMR shieldings is calculated in a "NICS-way":
-results_iso_from_isolated_allenv_to_mol_gh, results_aniso_from_isolated_allenv_to_mol_gh \
+r2_iso_gh, r2_aniso_gh \
 = calculate_nmr_shieldings((m_h2o+m_env).add_as_ghosts(m_mol), r_allenv_gh, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=active_nmr_atoms_coords, label="isolated allenv with mol as ghosts: NICS-like contribution from allenv to mol", print_to_output=True)
 
 
@@ -363,35 +363,63 @@ for i, ind in enumerate(active_nmr_atoms_index):
     z = str(coords[2])
     k = x+", "+y+", "+z
 
-    r1 = results_iso_from_isolated_mol_to_mol_gh[k]
-    r2 = results_iso_from_isolated_allenv_to_mol_gh[k]
+    r1 = r1_iso_gh[k]
+    r2 = r2_iso_gh[k]
     print("The isotropic shielding of nucleus {} placed at {} from calculations on isolated sub1(mol) with ghosts is {:.3f}".format(nuc,k,r1))
     print("The isotropic shielding of nucleus {} placed at {} from calculations on isolated sub2(allenv) with ghosts - NICS-type contribution - is {:.3f}".format(nuc,k,r2))
     print("The total isotropic shielding of nucleus {} placed at {} estimated as a sum of results for isolated subsystems (with ghosts) is {:.3f}".format(nuc,k,r1+r2))
 
-    r1 = results_aniso_from_isolated_mol_to_mol_gh[k]
-    r2 = results_aniso_from_isolated_allenv_to_mol_gh[k]
+    r1 = r1_aniso_gh[k]
+    r2 = r2_aniso_gh[k]
     print("The anisotropic shielding of nucleus {} placed at {} from calculations on isolated sub1(mol) with ghosts is {:.3f}".format(nuc,k,r1))
     print("The anisotropic shielding of nucleus {} placed at {} from calculations on isolated sub2(allenv) with ghosts - NICS-type contribution - is {:.3f}".format(nuc,k,r2))
     print("The total anisotropic shielding of nucleus {} placed at {} estimated as a sum of results for isolated subsystems (with ghosts) is {:.3f}".format(nuc,k,r1+r2))
 
 
+#   additionally, print various differences:
+    delta1 = results_tot_iso_super[k] - (r1_iso[k] + r2_iso[k])
+    delta2 = results_tot_iso_super[k] - (r1_iso_gh[k] + r2_iso_gh[k])
+    delta3 = r1_iso_gh[k] - r1_iso[k]
+    delta4 = r2_iso_gh[k] - r2_iso[k]
+
+    print("-----------------------------------------------------------------------------------------")
+    print("Solvent shifts and corrections evaluated for nuclei of active mol; environment is h2o+env")
+    print("-----------------------------------------------------------------------------------------")
+    print("Our reference solvent shift on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta1))
+    print("Our reference solvent shift, BSSE-corrected, on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta2))
+    print("BSSE correction on the isotropic shielding of nucleus {} at {} from isolated mol is {:.3f}".format(nuc,k,delta3))
+    print("BSSE correction on the isotropic shielding of nucleus {} at {} from entire environment (NICS-type) is {:.3f}".format(nuc,k,delta4))
+    print("Total BSSE correction on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta3+delta4))
+    print("\n")
+
+    delta1 = results_tot_aniso_super[k] - (r1_iso[k] + r2_iso[k])
+    delta2 = results_tot_aniso_super[k] - (r1_aniso_gh[k] + r2_aniso_gh[k])
+    delta3 = r1_aniso_gh[k] - r1_iso[k]
+    delta4 = r2_aniso_gh[k] - r2_iso[k]
+
+    print("Our reference solvent shift on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta1))
+    print("Our reference solvent shift, BSSE-corrected, on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta2))
+    print("BSSE correction on the anisotropic shielding of nucleus {} at {} from isolated mol is {:.3f}".format(nuc,k,delta3))
+    print("BSSE correction on the anisotropic shielding of nucleus {} at {} from entire environment (NICS-type) is {:.3f}".format(nuc,k,delta4))
+    print("Total BSSE correction on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta3+delta4))
+    print("\n")
+ 
 
 
-# (3) evaluate NMR of Hb ("h2o_nmr_atoms")
+# (3) evaluate NMR of Hb
 
 # do the calculations on sub1="m_mol": 
 # because we want to do the NMR of Hb, and this nucleus is not present in sub1, we need to add it as point charges:
 
 r_mol_pc  = adfsinglepointjob(m_mol,  basis_set, settings=settings, options=gen_sym_opts, pointcharges=h2o_nmr_atoms_coords).run()
 
-results_iso_from_isolated_mol_to_allenv, results_aniso_from_isolated_mol_to_allenv \
+r1_iso, r1_aniso \
 = calculate_nmr_shieldings(m_mol, r_mol_pc, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=h2o_nmr_atoms_coords, label="isolated mol: NICS-like contribution from mol to allenv", print_to_output=True)
 
 # do the calculations on sub2="m_h2o"+"m_env"
 r_allenv = adfsinglepointjob(m_h2o+m_env, basis_set, settings=settings, options=gen_sym_opts).run()
 
-results_iso_from_isolated_allenv_to_allenv, results_aniso_from_isolated_alenv_to_allenv \
+r2_iso, r2_aniso \
 = calculate_nmr_shieldings(m_h2o+m_env, r_allenv, active_atoms=h2o_nmr_atoms_index, active_labels=h2o_nmr_atoms_label, active_coords=active_h2o_atoms_coords, label="isolated allenv", print_to_output=True)
 
 
@@ -399,21 +427,21 @@ results_iso_from_isolated_allenv_to_allenv, results_aniso_from_isolated_alenv_to
 
 for i, ind in enumerate(h2o_nmr_atoms_index):
 
-    nuc = active_nmr_atoms_label[i]
-    coords = m_mol.get_coordinates()[ind-1]
+    nuc = h2o_nmr_atoms_label[i]
+    coords = m_h2o.get_coordinates()[ind-1]
     x = str(coords[0])
     y = str(coords[1])
     z = str(coords[2])
     k = x+", "+y+", "+z
 
-    r1 = results_iso_from_isolated_mol_to_allenv[k]
-    r2 = results_iso_from_isolated_allenv_to_allenv[k]
+    r1 = r1_iso[k]
+    r2 = r2_iso[k]
     print("The isotropic shielding of nucleus {} placed at {} from calculations on isolated sub1(mol) - NICS-type contribution - is {:.3f}".format(nuc,k,r1))
     print("The isotropic shielding of nucleus {} placed at {} from calculations on isolated sub2(allenv) is {:.3f}".format(nuc,k,r2))
     print("The total isotropic shielding of nucleus {} placed at {} estimated as a sum of results for isolated subsystems is {:.3f}".format(nuc,k,r1+r2))
 
-    r1 = results_aniso_from_isolated_mol_to_allenv[k]
-    r2 = results_aniso_from_isolated_allenv_to_allenv[k]
+    r1 = r1_aniso[k]
+    r2 = r2_aniso[k]
     print("The anisotropic shielding of nucleus {} placed at {} from calculations on isolated sub1(mol) - NICS-type contribution - is {:.3f}".format(nuc,k,r1))
     print("The anisotropic shielding of nucleus {} placed at {} from calculations on isolated sub2(allenv) is {:.3f}".format(nuc,k,r2))
     print("The total anisotropic shielding of nucleus {} placed at {} estimated as a sum of results for isolated subsystems is {:.3f}".format(nuc,k,r1+r2))
@@ -426,88 +454,17 @@ for i, ind in enumerate(h2o_nmr_atoms_index):
 # but in this case, they are already added as ghosts
 r_mol_gh  = adfsinglepointjob(m_mol.add_as_ghosts(m_h2o+m_env),  basis_set, settings=settings, options=gen_sym_opts).run()
 
-results_iso_from_isolated_mol_to_allenv_gh, results_aniso_from_isolated_mol_to_allenv_gh \
+r1_iso_gh, r1_aniso_gh \
 = calculate_nmr_shieldings(m_mol.add_as_ghosts(m_h2o+m_env), r_mol_gh, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=h2o_nmr_atoms_coords, label="isolated mol: NICS-like contribution from mol to allenv with allenv as ghosts", print_to_output=True)
 
 # do the calculations on sub2="m_h2o"+"m_env"
 r_allenv_gh = adfsinglepointjob((m_h2o+m_env).add_as_ghosts(m_mol), basis_set, settings=settings, options=gen_sym_opts).run()
 
-results_iso_from_isolated_allenv_to_allenv_gh, results_aniso_from_isolated_alenv_to_allenv_gh \
+r2_iso_gh, r2_aniso_gh \
 = calculate_nmr_shieldings((m_h2o+m_env).add_as_ghosts(m_mol), r_allenv_gh, active_atoms=h2o_nmr_atoms_index, active_labels=h2o_nmr_atoms_label, active_coords=active_h2o_atoms_coords, label="isolated allenv with mol as ghosts", print_to_output=True)
 
 
 # PRINT OUT the data:
-
-for i, ind in enumerate(h2o_nmr_atoms_index):
-
-    nuc = active_nmr_atoms_label[i]
-    coords = m_mol.get_coordinates()[ind-1]
-    x = str(coords[0])
-    y = str(coords[1])
-    z = str(coords[2])
-    k = x+", "+y+", "+z
-
-    r1 = results_iso_from_isolated_mol_to_allenv_gh[k]
-    r2 = results_iso_from_isolated_allenv_to_allenv_gh[k]
-    print("The isotropic shielding of nucleus {} placed at {} from calculations on isolated sub1(mol) with ghosts - NICS-type contribution - is {:.3f}".format(nuc,k,r1))
-    print("The isotropic shielding of nucleus {} placed at {} from calculations on isolated sub2(allenv) with ghosts is {:.3f}".format(nuc,k,r2))
-    print("The total isotropic shielding of nucleus {} placed at {} estimated as a sum of results for isolated subsystems (with ghosts) is {:.3f}".format(nuc,k,r1+r2))
-
-    r1 = results_aniso_from_isolated_mol_to_allenv_gh[k]
-    r2 = results_aniso_from_isolated_allenv_to_allenv_gh[k]
-    print("The anisotropic shielding of nucleus {} placed at {} from calculations on isolated sub1(mol) with ghosts - NICS-type contribution - is {:.3f}".format(nuc,k,r1))
-    print("The anisotropic shielding of nucleus {} placed at {} from calculations on isolated sub2(allenv) with ghosts is {:.3f}".format(nuc,k,r2))
-    print("The total anisotropic shielding of nucleus {} placed at {} estimated as a sum of results for isolated subsystems (with ghosts) is {:.3f}".format(nuc,k,r1+r2))
-
-
-
-
-
-#
-# At this stage, we can already assess various differences and solvent shifts; examples:
-#
-
-for i, ind in enumerate(active_nmr_atoms_index):
-
-    nuc = active_nmr_atoms_label[i]
-    coords = m_mol.get_coordinates()[ind-1]
-    x = str(coords[0])
-    y = str(coords[1])
-    z = str(coords[2])
-    k = x+", "+y+", "+z
-
-    delta1 = results_tot_iso_super[k] - (results_iso_from_isolated_mol_to_mol[k] + results_iso_from_isolated_allenv_to_mol[k])
-    delta2 = results_tot_iso_super[k] - (results_iso_from_isolated_mol_to_mol_gh[k] + results_iso_from_isolated_allenv_to_mol_gh[k])
-    delta3 = results_iso_from_isolated_mol_to_mol_gh[k] - results_iso_from_isolated_mol_to_mol[k]
-    delta4 = results_iso_from_isolated_allenv_to_mol_gh[k] - results_iso_from_isolated_allenv_to_mol[k]
-
-    print("-------------------------------------------------------------------------")
-    print("Solvent shifts evaluated for nuclei of active mol; environment is h2o+env")
-    print("-------------------------------------------------------------------------")
-    print("BSSE correction on the isotropic shielding of nucleus {} at {} from isolated mol is {:.3f}".format(nuc,k,delta3))
-    print("BSSE correction on the isotropic shielding of nucleus {} at {} from entire environment (NICS-type) is {:.3f}".format(nuc,k,delta4))
-    print("Total BSSE correction on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta3+delta4))
-    print("Our reference solvent shift on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta1))
-    print("Our reference solvent shift, BSSE-corrected, on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta2))
-    print("\n")
-
-    delta1 = results_tot_aniso_super[k] - (results_aniso_from_isolated_mol_to_mol[k] + results_aniso_from_isolated_allenv_to_mol[k])
-    delta2 = results_tot_aniso_super[k] - (results_aniso_from_isolated_mol_to_mol_gh[k] + results_aniso_from_isolated_allenv_to_mol_gh[k])
-    delta3 = results_aniso_from_isolated_mol_to_mol_gh[k] - results_aniso_from_isolated_mol_to_mol[k]
-    delta4 = results_aniso_from_isolated_allenv_to_mol_gh[k] - results_aniso_from_isolated_allenv_to_mol[k]
-
-    print("-------------------------------------------------------------------------")
-    print("Solvent shifts evaluated for nuclei of active mol; environment is h2o+env")
-    print("-------------------------------------------------------------------------")
-    print("BSSE correction on the anisotropic shielding of nucleus {} at {} from isolated mol is {:.3f}".format(nuc,k,delta3))
-    print("BSSE correction on the anisotropic shielding of nucleus {} at {} from entire environment (NICS-type) is {:.3f}".format(nuc,k,delta4))
-    print("Total BSSE correction on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta3+delta4))
-    print("Our reference solvent shift on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta1))
-    print("Our reference solvent shift, BSSE-corrected, on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta2))
-    print("\n")
-
-
-
 
 for i, ind in enumerate(h2o_nmr_atoms_index):
 
@@ -518,33 +475,47 @@ for i, ind in enumerate(h2o_nmr_atoms_index):
     z = str(coords[2])
     k = x+", "+y+", "+z
 
-    delta1 = results_tot_iso_super[k] - (results_tot_iso_isolated_h2o[k] + results_tot_iso_isolated_molenv_nics_to_h2o[k])
-    delta2 = results_tot_iso_super[k] - (results_tot_iso_isolated_h2o_allothergh[k] + results_tot_iso_isolated_molenv_nics_to_h2o_gh[k])
-    delta3 = results_tot_iso_isolated_h2o_allothergh[k] - results_tot_iso_isolated_h2o[k]
-    delta4 = results_tot_iso_isolated_molenv_nics_to_h2o_gh[k] - results_tot_iso_isolated_molenv_nics_to_h2o[k]
+    r1 = r1_iso_gh[k]
+    r2 = r2_iso_gh[k]
+    print("The isotropic shielding of nucleus {} placed at {} from calculations on isolated sub1(mol) with ghosts - NICS-type contribution - is {:.3f}".format(nuc,k,r1))
+    print("The isotropic shielding of nucleus {} placed at {} from calculations on isolated sub2(allenv) with ghosts is {:.3f}".format(nuc,k,r2))
+    print("The total isotropic shielding of nucleus {} placed at {} estimated as a sum of results for isolated subsystems (with ghosts) is {:.3f}".format(nuc,k,r1+r2))
 
-    print("------------------------------------------------------------------")
-    print("Solvent shifts evaluated for nuclei of h2o+env; environment is mol")
-    print("------------------------------------------------------------------")
-    print("BSSE correction on the isotropic shielding of nucleus {} at {} from isolated h2o is {:.3f}".format(nuc,k,delta3))
-    print("BSSE correction on the isotropic shielding of nucleus {} at {} from entire environment (NICS-type) is {:.3f}".format(nuc,k,delta4))
-    print("Total BSSE correction on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta3+delta4))
+    r1 = r1_aniso_gh[k]
+    r2 = r2_aniso_gh[k]
+    print("The anisotropic shielding of nucleus {} placed at {} from calculations on isolated sub1(mol) with ghosts - NICS-type contribution - is {:.3f}".format(nuc,k,r1))
+    print("The anisotropic shielding of nucleus {} placed at {} from calculations on isolated sub2(allenv) with ghosts is {:.3f}".format(nuc,k,r2))
+    print("The total anisotropic shielding of nucleus {} placed at {} estimated as a sum of results for isolated subsystems (with ghosts) is {:.3f}".format(nuc,k,r1+r2))
+
+
+#   additionally, print various differences:
+    delta1 = results_tot_iso_super[k] - (r1_iso[k] + r2_iso[k])
+    delta2 = results_tot_iso_super[k] - (r1_iso_gh[k] + r2_iso_gh[k])
+    delta3 = r1_iso_gh[k] - r1_iso[k]
+    delta4 = r2_iso_gh[k] - r2_iso[k]
+
+    print("--------------------------------------------------------------")
+    print("Solvent shifts and corrections evaluated for nuclei of h2o+env")
+    print("--------------------------------------------------------------")
     print("Our reference solvent shift on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta1))
     print("Our reference solvent shift, BSSE-corrected, on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta2))
+    print("BSSE correction on the isotropic shielding of nucleus {} at {} from isolated mol (NICS-type) is {:.3f}".format(nuc,k,delta3))
+    print("BSSE correction on the isotropic shielding of nucleus {} at {} from entire environment is {:.3f}".format(nuc,k,delta4))
+    print("Total BSSE correction on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta3+delta4))
     print("\n")
- 
-    delta1 = results_tot_aniso_super[k] - (results_tot_aniso_isolated_h2o[k] + results_tot_aniso_isolated_molenv_nics_to_h2o[k])
-    delta2 = results_tot_aniso_super[k] - (results_tot_aniso_isolated_h2o_allothergh[k] + results_tot_aniso_isolated_molenv_nics_to_h2o_gh[k])
-    delta3 = results_tot_aniso_isolated_h2o_allothergh[k] - results_tot_aniso_isolated_h2o[k]
-    delta4 = results_tot_aniso_isolated_molenv_nics_to_h2o_gh[k] - results_tot_aniso_isolated_molenv_nics_to_h2o[k]
 
-    print("------------------------------------------------------------------")
-    print("Solvent shifts evaluated for nuclei of h2o+env; environment is mol")
-    print("------------------------------------------------------------------")
-    print("BSSE correction on the anisotropic shielding of nucleus {} at {} from isolated h2o is {:.3f}".format(nuc,k,delta3))
-    print("BSSE correction on the anisotropic shielding of nucleus {} at {} from entire environment (NICS-type) is {:.3f}".format(nuc,k,delta4))
-    print("Total BSSE correction on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta3+delta4))
+    delta1 = results_tot_aniso_super[k] - (r1_iso[k] + r2_iso[k])
+    delta2 = results_tot_aniso_super[k] - (r1_aniso_gh[k] + r2_aniso_gh[k])
+    delta3 = r1_aniso_gh[k] - r1_iso[k]
+    delta4 = r2_aniso_gh[k] - r2_iso[k]
+
     print("Our reference solvent shift on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta1))
     print("Our reference solvent shift, BSSE-corrected, on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta2))
+    print("BSSE correction on the anisotropic shielding of nucleus {} at {} from isolated mol (NICS-type) is {:.3f}".format(nuc,k,delta3))
+    print("BSSE correction on the anisotropic shielding of nucleus {} at {} from entire environment is {:.3f}".format(nuc,k,delta4))
+    print("Total BSSE correction on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta3+delta4))
     print("\n")
-     
+ 
+
+
+
