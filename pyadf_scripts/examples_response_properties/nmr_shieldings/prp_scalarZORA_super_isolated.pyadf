@@ -420,7 +420,7 @@ r1_iso, r1_aniso \
 r_allenv = adfsinglepointjob(m_h2o+m_env, basis_set, settings=settings, options=gen_sym_opts).run()
 
 r2_iso, r2_aniso \
-= calculate_nmr_shieldings(m_h2o+m_env, r_allenv, active_atoms=h2o_nmr_atoms_index, active_labels=h2o_nmr_atoms_label, active_coords=active_h2o_atoms_coords, label="isolated allenv", print_to_output=True)
+= calculate_nmr_shieldings(m_h2o+m_env, r_allenv, active_atoms=h2o_nmr_atoms_index, active_labels=h2o_nmr_atoms_label, active_coords=active_nmr_atoms_coords, label="isolated allenv", print_to_output=True)
 
 
 # PRINT OUT the data:
@@ -461,7 +461,7 @@ r1_iso_gh, r1_aniso_gh \
 r_allenv_gh = adfsinglepointjob((m_h2o+m_env).add_as_ghosts(m_mol), basis_set, settings=settings, options=gen_sym_opts).run()
 
 r2_iso_gh, r2_aniso_gh \
-= calculate_nmr_shieldings((m_h2o+m_env).add_as_ghosts(m_mol), r_allenv_gh, active_atoms=h2o_nmr_atoms_index, active_labels=h2o_nmr_atoms_label, active_coords=active_h2o_atoms_coords, label="isolated allenv with mol as ghosts", print_to_output=True)
+= calculate_nmr_shieldings((m_h2o+m_env).add_as_ghosts(m_mol), r_allenv_gh, active_atoms=h2o_nmr_atoms_index, active_labels=h2o_nmr_atoms_label, active_coords=active_nmr_atoms_coords, label="isolated allenv with mol as ghosts", print_to_output=True)
 
 
 # PRINT OUT the data:
