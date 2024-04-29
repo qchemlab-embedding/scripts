@@ -392,7 +392,7 @@ for i, ind in enumerate(active_nmr_atoms_index):
     print("Total BSSE correction on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta3+delta4))
     print("\n")
 
-    delta1 = results_tot_aniso_super[k] - (r1_iso[k] + r2_iso[k])
+    delta1 = results_tot_aniso_super[k] - (r1_aniso[k] + r2_aniso[k])
     delta2 = results_tot_aniso_super[k] - (r1_aniso_gh[k] + r2_aniso_gh[k])
     delta3 = r1_aniso_gh[k] - r1_iso[k]
     delta4 = r2_aniso_gh[k] - r2_iso[k]
@@ -504,7 +504,7 @@ for i, ind in enumerate(h2o_nmr_atoms_index):
     print("Total BSSE correction on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta3+delta4))
     print("\n")
 
-    delta1 = results_tot_aniso_super[k] - (r1_iso[k] + r2_iso[k])
+    delta1 = results_tot_aniso_super[k] - (r1_aniso[k] + r2_aniso[k])
     delta2 = results_tot_aniso_super[k] - (r1_aniso_gh[k] + r2_aniso_gh[k])
     delta3 = r1_aniso_gh[k] - r1_iso[k]
     delta4 = r2_aniso_gh[k] - r2_iso[k]
