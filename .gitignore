@@ -1,4 +1,5 @@
 alloutput*.out
+pyadf*.out
 output*.out
 *.err
 *.log
