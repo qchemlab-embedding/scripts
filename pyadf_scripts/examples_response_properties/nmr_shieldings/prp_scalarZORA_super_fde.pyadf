@@ -24,7 +24,7 @@ if 'pyadfenv' not in globals():
 # functions grepping key ADF results
 ##########################################################
 
-def calculate_nmr_shieldings(molecule, results, active_atoms=None, active_labels=None, active_coords=None, label=None, ghost_coords=None, print_to_output=False):
+def calculate_nmr_shieldings(molecule, results, active_atoms=None, active_labels=None, active_coords=None, label=None, ghost_coords=None, ghost_labels=None, print_to_output=False):
 
     print( " # " )
     print( " # Output from calculate_nmr_shieldings:" )
@@ -81,13 +81,13 @@ def calculate_nmr_shieldings(molecule, results, active_atoms=None, active_labels
 
             if print_to_output:
                 print( "NMR results at ghost coords: "+coords+"\n" )
-                print( "## Shielding_iso_para  : ("+label+") :", para_iso )
-                print( "## Shielding_iso_dia   : ("+label+") :", dia_iso )
-                print( "## Shielding_iso_total : ("+label+") :", tot_iso )
+                print( "## Shielding_iso_para  "+ghost_labels[g]+"("+label+") :", para_iso )
+                print( "## Shielding_iso_dia   "+ghost_labels[g]+"("+label+") :", dia_iso )
+                print( "## Shielding_iso_total "+ghost_labels[g]+"("+label+") :", tot_iso )
                 print( "\n" )
-                print( "## Shielding_aniso_para  : ("+label+") :", para_aniso )
-                print( "## Shielding_aniso_dia   : ("+label+") :", dia_aniso )
-                print( "## Shielding_aniso_total : ("+label+") :", tot_aniso )
+                print( "## Shielding_aniso_para  "+ghost_labels[g]+"("+label+") :", para_aniso )
+                print( "## Shielding_aniso_dia   "+ghost_labels[g]+"("+label+") :", dia_aniso )
+                print( "## Shielding_aniso_total "+ghost_labels[g]+"("+label+") :", tot_aniso )
                 print( "\n" )
 
             results_para_iso[coords] = para_iso
@@ -124,14 +124,17 @@ m_h2o  = molecule(file_h2o)
 m_env1 = molecule(file_env1)
 m_env2 = molecule(file_env2)
 m_env3 = molecule(file_env3)
-# also: group "m_envX" molecules into "m_env":
+# you can "group" molecules into subsystems, for instance:
+# * group "m_envX" molecules into "m_env":
 m_e = []
 for i in range(1,4):
     m = molecule(os.path.join(geometries_dir, f'solvent{i:d}.xyz'))
     m_e.append(m)
 m_env = sum(m_e)
-# ...and entire supermolecule:
+# * and entire supermolecule:
 m_tot = m_mol + m_h2o + m_env1 + m_env2 + m_env3
+# * and entire solvent:
+m_allenv = m_h2o + m_env1 + m_env2 + m_env3
 
 # if a system is charged, then remember to set it up 
 #charge_mol=0
@@ -145,6 +148,7 @@ m_env1.set_symmetry('NOSYM')
 m_env2.set_symmetry('NOSYM')
 m_env3.set_symmetry('NOSYM')
 m_env.set_symmetry('NOSYM')
+m_allenv.set_symmetry('NOSYM')
 m_tot.set_symmetry('NOSYM')
 
 print('Coordinates of all (sub)systems:')
@@ -159,7 +163,7 @@ print(m_env2.print_coordinates())
 print('env3:')
 print(m_env3.print_coordinates())
 print('entire environment:')
-print((m_h2o+m_env).print_coordinates())
+print((m_allenv).print_coordinates())
 print('entire system:')
 print(m_tot.print_coordinates())
 
@@ -281,14 +285,13 @@ for i in super_nmr_atoms_index:
 
 
 # (1) run calculations on an entire system ("supermolecular" reference):
+# ----------------------------------------------------------------------
 
 r_tot  = adfsinglepointjob(m_tot,  basis_set, settings=settings, options=gen_sym_opts).run()
 agrid = adfgrid(r_tot)
 
 results_tot_iso_super, results_tot_aniso_super \
 = calculate_nmr_shieldings(m_tot, r_tot, active_atoms=super_nmr_atoms_index,  active_labels=super_nmr_atoms_label, active_coords=super_nmr_atoms_coords, label="supermolecule", print_to_output=True)
-
-# PRINT OUT the data:
 
 for i, ind in enumerate(super_nmr_atoms_index):
 
@@ -305,18 +308,18 @@ for i, ind in enumerate(super_nmr_atoms_index):
     print("The anisotropic shielding of nucleus {} placed at {} from supermolecular calculations is {:.3f}".format(nuc,k,r2))
 
 
-# ------------------------------------------------
+# -------------------------------------------------------------------------
 # FDE calculations
-# Note:  these calculations are done on 'full' supermolecular grids (option 'FULLGRID');
-#        This can be expensive for large systems; 
-#        so in cases where we do not use 'FULLGRID',
-#        we might evaluate the BSSE correction based
-#        on supermolecular-isolated calculations 
-#        (if those are already done)
-# ------------------------------------------------
+# Note:  these calculations are done on 'full' 
+# supermolecular grids (option 'FULLGRID');
+# This can be expensive for large systems, so
+# we skip the evaluation of BSSE corrections
+# (we can use the estimates done for supermolecular-isolated calculations)
+# -------------------------------------------------------------------------
 
 
-# (2) evaluate NMR of C and N ("active_nmr_atoms")
+# (2) evaluate NMR of C and N (nuclei in "active_nmr_atoms"):
+# -----------------------------------------------------------
 
 # here, we do the calculations on the following subsystems:
 # * active = m_mol
@@ -339,9 +342,7 @@ r1_iso, r1_aniso \
 # - we add point charges in positions of active_nmr_atoms_coords, as these are not present in m_h2o+m_env
 r_allenv_pc = adfsinglepointjob(m_h2o+m_env, basis_set, settings=settings, options=gen_sym_opts, pointcharges=active_nmr_atoms_coords).run()
 r2_iso, r2_aniso \
-= calculate_nmr_shieldings(m_h2o+m_env, r_allenv_pc, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=active_nmr_atoms_coords, label="frozen allenv: NICS-like contribution from allenv to mol", print_to_output=True)
-
-# PRINT OUT the data:
+= calculate_nmr_shieldings(m_h2o+m_env, r_allenv_pc, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=active_nmr_atoms_coords, ghost_labels=active_nmr_atoms_label, label="frozen allenv: NICS-like contribution from allenv to mol", print_to_output=True)
 
 for i, ind in enumerate(active_nmr_atoms_index):
 
@@ -365,12 +366,11 @@ for i, ind in enumerate(active_nmr_atoms_index):
     print("The total anisotropic shielding of nucleus {} placed at {} estimated as a sum of FDE results for subsystems is {:.3f}".format(nuc,k,r1+r2))
 
 
-#   additionally, print various differences:
     delta1 = results_tot_iso_super[k] - (r1_iso[k] + r2_iso[k])
 
-    print("-----------------------------------------------------------------------------------------")
-    print("Solvent shifts and corrections evaluated for nuclei of active mol; environment is h2o+env")
-    print("-----------------------------------------------------------------------------------------")
+    print("-------------------------------------------------------------------------")
+    print("Solvent shifts evaluated for nuclei of active mol; environment is h2o+env")
+    print("-------------------------------------------------------------------------")
     print("FDE solvent shift on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta1))
     print("\n")
 
@@ -405,10 +405,8 @@ r1_iso, r1_aniso \
 # - we do not do "FDE" here, as in strict FDE, m_mol is now kept as frozen
 # - we do not repeat calculations for r_mol - it is done above
 r2_iso, r2_aniso \
-= calculate_nmr_shieldings(m_mol, r_mol, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=h2o_nmr_atoms_coords, label="frozen mol: NICS-like contribution from mol to allenv", print_to_output=True)
+= calculate_nmr_shieldings(m_mol, r_mol, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=h2o_nmr_atoms_coords, ghost_labels=h2o_nmr_atoms_label, label="frozen mol: NICS-like contribution from mol to allenv", print_to_output=True)
 
-
-# PRINT OUT the data:
 
 for i, ind in enumerate(h2o_nmr_atoms_index):
 
@@ -432,12 +430,11 @@ for i, ind in enumerate(h2o_nmr_atoms_index):
     print("The total anisotropic shielding of nucleus {} placed at {} estimated as a sum of FDE results for subsystems is {:.3f}".format(nuc,k,r1+r2))
 
 
-#   additionally, print various differences:
     delta1 = results_tot_iso_super[k] - (r1_iso[k] + r2_iso[k])
 
-    print("----------------------------------------------------------------------------------")
-    print("Solvent shifts and corrections evaluated for nuclei of h2o+env; environment is mol")
-    print("----------------------------------------------------------------------------------")
+    print("------------------------------------------------------------------")
+    print("Solvent shifts evaluated for nuclei of h2o+env; environment is mol")
+    print("------------------------------------------------------------------")
     print("FDE solvent shift on the isotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta1))
     print("\n")
 
@@ -446,7 +443,3 @@ for i, ind in enumerate(h2o_nmr_atoms_index):
     print("FDE solvent shift on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta1))
     print("\n")
  
-
-
-
-
