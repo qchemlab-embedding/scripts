@@ -38,11 +38,7 @@ def calculate_nmr_shieldings(molecule, results, active_atoms=None, active_labels
         # remember to add ghosts in SCF step (as ghosts to a system or as pointcharges)
         nmr_results = adfnmrjob(results, active_atoms, ghosts=ghost_coords, out='all', use='FXC', calc='all', u1k='best').run()
 
-    results_para_iso = {}
-    results_dia_iso  = {}
     results_tot_iso  = {}
-    results_para_aniso = {}
-    results_dia_aniso  = {}
     results_tot_aniso  = {}
 
     if active_atoms is not None:
@@ -51,24 +47,15 @@ def calculate_nmr_shieldings(molecule, results, active_atoms=None, active_labels
             ay = str(active_coords[a][1])
             az = str(active_coords[a][2])
             coords = ax+", "+ay+", "+az
-            tot_iso,para_iso,dia_iso,tot_aniso,para_aniso,dia_aniso = nmr_results.get_shielding(nuc=active_atoms[a])
+            tot_iso,tot_aniso = nmr_results.get_shielding(nuc=active_atoms[a])
 
             if print_to_output:
                 print( "NMR results for an active atom: ", active_atoms[a], " at coords: "+coords+"\n" )
-                print( "@@ Shielding_iso_para  "+active_labels[a]+"("+label+") :", para_iso )
-                print( "@@ Shielding_iso_dia   "+active_labels[a]+"("+label+") :", dia_iso )
                 print( "@@ Shielding_iso_total "+active_labels[a]+"("+label+") :", tot_iso )
-                print( "\n" )
-                print( "@@ Shielding_aniso_para  "+active_labels[a]+"("+label+") :", para_aniso )
-                print( "@@ Shielding_aniso_dia   "+active_labels[a]+"("+label+") :", dia_aniso )
                 print( "@@ Shielding_aniso_total "+active_labels[a]+"("+label+") :", tot_aniso )
                 print( "\n" )
 
-            results_para_iso[coords] = para_iso
-            results_dia_iso[coords] = dia_iso
             results_tot_iso[coords] = tot_iso
-            results_para_aniso[coords] = para_aniso
-            results_dia_aniso[coords] = dia_aniso
             results_tot_aniso[coords] = tot_aniso
 
     if ghost_coords is not None:
@@ -77,31 +64,21 @@ def calculate_nmr_shieldings(molecule, results, active_atoms=None, active_labels
             cy = str(ghost_coords[g][1])
             cz = str(ghost_coords[g][2])
             coords = cx+", "+cy+", "+cz
-            tot_iso,para_iso,dia_iso,tot_aniso,para_aniso,dia_aniso = nmr_results.get_shielding(ghost=g+1)
+            tot_iso,tot_aniso = nmr_results.get_shielding(ghost=g+1)
 
             if print_to_output:
                 print( "NMR results at ghost coords: "+coords+"\n" )
-                print( "## Shielding_iso_para  "+ghost_labels[g]+"("+label+") :", para_iso )
-                print( "## Shielding_iso_dia   "+ghost_labels[g]+"("+label+") :", dia_iso )
                 print( "## Shielding_iso_total "+ghost_labels[g]+"("+label+") :", tot_iso )
-                print( "\n" )
-                print( "## Shielding_aniso_para  "+ghost_labels[g]+"("+label+") :", para_aniso )
-                print( "## Shielding_aniso_dia   "+ghost_labels[g]+"("+label+") :", dia_aniso )
                 print( "## Shielding_aniso_total "+ghost_labels[g]+"("+label+") :", tot_aniso )
                 print( "\n" )
 
-            results_para_iso[coords] = para_iso
-            results_dia_iso[coords] = dia_iso
             results_tot_iso[coords] = tot_iso
-            results_para_aniso[coords] = para_aniso
-            results_dia_aniso[coords] = dia_aniso
             results_tot_aniso[coords] = tot_aniso
 
     print( " # -- end of calculate_nmr_shieldings -- #" )
-
-    # we only need isotropic and anisotropic values for the moment:
-    #return results_para_iso, results_dia_iso, results_tot_iso, results_para_aniso, results_dia_aniso, results_tot_aniso
     return results_tot_iso, results_tot_aniso
+
+
 
 
 
