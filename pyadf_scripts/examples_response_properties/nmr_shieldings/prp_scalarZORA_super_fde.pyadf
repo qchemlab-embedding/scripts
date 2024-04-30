@@ -331,7 +331,7 @@ r_allenv = adfsinglepointjob(m_h2o+m_env, basis_set, settings=settings, options=
 frags = [ fragment(None,  [m_mol]), 
           fragment(r_allenv, [m_h2o+m_env], isfrozen=True, fdeoptions=fnt_frz_opts) ]
 
-r_mol_with_frozen_allenv = adffragmentsjob(frags, basis_set, settings=settings, fde=fnt_act_opts, options=gen_fde_opts).run()
+r_mol_with_frozen_allenv = adffragmentsjob(frags, basis_set, settings=settings, fde=fde_act_opts, options=gen_fde_opts).run()
 
 r1_iso, r1_aniso \
 = calculate_nmr_shieldings(frags, r_mol_with_frozen_allenv, active_atoms=active_nmr_atoms_index, active_labels=active_nmr_atoms_label, active_coords=active_nmr_atoms_coords, label="FDE: active=mol, frozen=allenv", print_to_output=True)
@@ -393,9 +393,9 @@ for i, ind in enumerate(active_nmr_atoms_index):
 r_mol  = adfsinglepointjob(m_mol,  basis_set, settings=settings, options=gen_sym_opts).run()
 
 frags = [ fragment(None,  [m_h2o+m_env]), 
-          fragment(r_mol, [m_mol], isfrozen=True, fdeoptions=fnt_frz_opts) ]
+          fragment(r_mol, [m_mol], isfrozen=True, fdeoptions=fde_frz_opts) ]
 
-r_allenv_with_frozen_mol = adffragmentsjob(frags, basis_set, settings=settings, fde=fnt_act_opts, options=gen_fde_opts).run()
+r_allenv_with_frozen_mol = adffragmentsjob(frags, basis_set, settings=settings, fde=fde_act_opts, options=gen_fde_opts).run()
 
 r1_iso, r1_aniso \
 = calculate_nmr_shieldings(frags, r_allenv_with_frozen_mol, active_atoms=h2o_nmr_atoms_index, active_labels=h2o_nmr_atoms_label, active_coords=h2o_nmr_atoms_coords, ghost_coords=[], label="FDE: active=allenv, frozen=mol", print_to_output=True)
