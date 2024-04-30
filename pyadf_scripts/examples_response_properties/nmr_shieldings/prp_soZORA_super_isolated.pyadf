@@ -24,7 +24,7 @@ if 'pyadfenv' not in globals():
 # functions grepping key ADF results
 ##########################################################
 
-def calculate_nmr_shieldings(molecule, results, active_atoms=None, active_labels=None, active_coords=None, label=None, ghost_coords=None, print_to_output=False):
+def calculate_nmr_shieldings(molecule, results, active_atoms=None, active_labels=None, active_coords=None, label=None, ghost_coords=None, ghost_labels=None, print_to_output=False):
 
     print( " # " )
     print( " # Output from calculate_nmr_shieldings:" )
@@ -81,13 +81,13 @@ def calculate_nmr_shieldings(molecule, results, active_atoms=None, active_labels
 
             if print_to_output:
                 print( "NMR results at ghost coords: "+coords+"\n" )
-                print( "## Shielding_iso_para  : ("+label+") :", para_iso )
-                print( "## Shielding_iso_dia   : ("+label+") :", dia_iso )
-                print( "## Shielding_iso_total : ("+label+") :", tot_iso )
+                print( "## Shielding_iso_para  "+ghost_labels[g]+"("+label+") :", para_iso )
+                print( "## Shielding_iso_dia   "+ghost_labels[g]+"("+label+") :", dia_iso )
+                print( "## Shielding_iso_total "+ghost_labels[g]+"("+label+") :", tot_iso )
                 print( "\n" )
-                print( "## Shielding_aniso_para  : ("+label+") :", para_aniso )
-                print( "## Shielding_aniso_dia   : ("+label+") :", dia_aniso )
-                print( "## Shielding_aniso_total : ("+label+") :", tot_aniso )
+                print( "## Shielding_aniso_para  "+ghost_labels[g]+"("+label+") :", para_aniso )
+                print( "## Shielding_aniso_dia   "+ghost_labels[g]+"("+label+") :", dia_aniso )
+                print( "## Shielding_aniso_total "+ghost_labels[g]+"("+label+") :", tot_aniso )
                 print( "\n" )
 
             results_para_iso[coords] = para_iso
@@ -124,14 +124,17 @@ m_h2o  = molecule(file_h2o)
 m_env1 = molecule(file_env1)
 m_env2 = molecule(file_env2)
 m_env3 = molecule(file_env3)
-# also: group "m_envX" molecules into "m_env":
+# you can "group" molecules into subsystems, for instance:
+# * group "m_envX" molecules into "m_env":
 m_e = []
 for i in range(1,4):
     m = molecule(os.path.join(geometries_dir, f'solvent{i:d}.xyz'))
     m_e.append(m)
 m_env = sum(m_e)
-# ...and entire supermolecule:
+# * and entire supermolecule:
 m_tot = m_mol + m_h2o + m_env1 + m_env2 + m_env3
+# * and entire solvent:
+m_allenv = m_h2o + m_env1 + m_env2 + m_env3
 
 # if a system is charged, then remember to set it up 
 #charge_mol=0
@@ -145,6 +148,7 @@ m_env1.set_symmetry('NOSYM')
 m_env2.set_symmetry('NOSYM')
 m_env3.set_symmetry('NOSYM')
 m_env.set_symmetry('NOSYM')
+m_allenv.set_symmetry('NOSYM')
 m_tot.set_symmetry('NOSYM')
 
 print('Coordinates of all (sub)systems:')
@@ -159,7 +163,7 @@ print(m_env2.print_coordinates())
 print('env3:')
 print(m_env3.print_coordinates())
 print('entire environment:')
-print((m_h2o+m_env).print_coordinates())
+print((m_allenv).print_coordinates())
 print('entire system:')
 print(m_tot.print_coordinates())
 
@@ -266,14 +270,13 @@ for i in super_nmr_atoms_index:
 
 
 # (1) run calculations on an entire system ("supermolecular" reference):
+# ----------------------------------------------------------------------
 
 r_tot  = adfsinglepointjob(m_tot,  basis_set, settings=settings, options=gen_sym_opts).run()
 agrid = adfgrid(r_tot)
 
 results_tot_iso_super, results_tot_aniso_super \
 = calculate_nmr_shieldings(m_tot, r_tot, active_atoms=super_nmr_atoms_index,  active_labels=super_nmr_atoms_label, active_coords=super_nmr_atoms_coords, label="supermolecule", print_to_output=True)
-
-# PRINT OUT the data:
 
 for i, ind in enumerate(super_nmr_atoms_index):
 
@@ -290,14 +293,14 @@ for i, ind in enumerate(super_nmr_atoms_index):
     print("The anisotropic shielding of nucleus {} placed at {} from supermolecular calculations is {:.3f}".format(nuc,k,r2))
 
 
-# (2) evaluate NMR of C and N ("active_nmr_atoms")
+# (2) evaluate NMR of C and N (nuclei in "active_nmr_atoms"):
+# -----------------------------------------------------------
 
 # do the calculations on sub1="m_mol": 
-
 r_mol  = adfsinglepointjob(m_mol,  basis_set, settings=settings, options=gen_sym_opts).run()
 
 r1_iso, r1_aniso \
-= calculate_nmr_shieldings(m_mol, r_mol, active_atoms=active_nmr_atoms_index, active_labels=active_nmr_atoms_label, active_coords=active_nmr_atoms_coords, label="isolated mol", print_to_output=True)
+= calculate_nmr_shieldings(m_mol, r_mol, active_atoms=active_nmr_atoms_index, active_labels=active_nmr_atoms_label, active_coords=active_nmr_atoms_coords, label="isolated m_mol", print_to_output=True)
 
 # do the calculations on sub2="m_h2o"+"m_env"
 # because we want to do the NMR of C and N, and these nuclei are not present in sub2, we need to add them as point charges:
@@ -306,10 +309,7 @@ r_allenv_pc = adfsinglepointjob(m_h2o+m_env, basis_set, settings=settings, optio
 # in this case, the contribution from sub2 to their NMR shieldings is calculated in a "NICS-way";
 # "ghost_coords" are placed in the position of C and N:
 r2_iso, r2_aniso \
-= calculate_nmr_shieldings(m_h2o+m_env, r_allenv_pc, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=active_nmr_atoms_coords, label="isolated allenv: NICS-like contribution from allenv to mol", print_to_output=True)
-
-
-# PRINT OUT the data:
+= calculate_nmr_shieldings(m_h2o+m_env, r_allenv_pc, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=active_nmr_atoms_coords, ghost_labels=active_nmr_atoms_label, label="isolated m_allenv: NICS-like contribution from allenv to mol", print_to_output=True)
 
 for i, ind in enumerate(active_nmr_atoms_index):
 
@@ -333,14 +333,13 @@ for i, ind in enumerate(active_nmr_atoms_index):
     print("The total anisotropic shielding of nucleus {} placed at {} estimated as a sum of results for isolated subsystems is {:.3f}".format(nuc,k,r1+r2))
 
 
-
-# the same, but adding ghost atoms:
+# do the same, but adding ghost atoms:
 
 # do the calculations on sub1="m_mol" with ghosts on atoms from other molecules:
 r_mol_gh  = adfsinglepointjob(m_mol.add_as_ghosts(m_h2o+m_env),  basis_set, settings=settings, options=gen_sym_opts).run()
 
 r1_iso_gh, r1_aniso_gh \
-= calculate_nmr_shieldings(m_mol.add_as_ghosts(m_h2o+m_env), r_mol_gh, active_atoms=active_nmr_atoms_index, active_labels=active_nmr_atoms_label, active_coords=active_nmr_atoms_coords, label="isolated mol with allenv as ghosts", print_to_output=True)
+= calculate_nmr_shieldings(m_mol.add_as_ghosts(m_h2o+m_env), r_mol_gh, active_atoms=active_nmr_atoms_index, active_labels=active_nmr_atoms_label, active_coords=active_nmr_atoms_coords, label="isolated m_mol with m_allenv as ghosts", print_to_output=True)
 
 # do the calculations on sub2="m_h2o"+"m_env"
 # because we want to do the NMR of C and N, and these nuclei are not present in sub2, we should normally need to add them as point charges,
@@ -349,11 +348,7 @@ r_allenv_gh = adfsinglepointjob((m_h2o+m_env).add_as_ghosts(m_mol), basis_set, s
 
 # in this case, the contribution from sub2 to their NMR shieldings is calculated in a "NICS-way":
 r2_iso_gh, r2_aniso_gh \
-= calculate_nmr_shieldings((m_h2o+m_env).add_as_ghosts(m_mol), r_allenv_gh, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=active_nmr_atoms_coords, label="isolated allenv with mol as ghosts: NICS-like contribution from allenv to mol", print_to_output=True)
-
-
-
-# PRINT OUT the data:
+= calculate_nmr_shieldings((m_h2o+m_env).add_as_ghosts(m_mol), r_allenv_gh, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=active_nmr_atoms_coords, ghost_labels=active_nmr_atoms_label, label="isolated m_allenv with mol as ghosts: NICS-like contribution from allenv to mol", print_to_output=True)
 
 for i, ind in enumerate(active_nmr_atoms_index):
 
@@ -406,25 +401,21 @@ for i, ind in enumerate(active_nmr_atoms_index):
     print("\n")
  
 
-
-# (3) evaluate NMR of Hb
+# (3) evaluate NMR of Hb (nuclei in "h2o_nmr_atoms"):
+# ---------------------------------------------------
 
 # do the calculations on sub1="m_mol": 
 # because we want to do the NMR of Hb, and this nucleus is not present in sub1, we need to add it as point charges:
-
 r_mol_pc  = adfsinglepointjob(m_mol,  basis_set, settings=settings, options=gen_sym_opts, pointcharges=h2o_nmr_atoms_coords).run()
 
 r1_iso, r1_aniso \
-= calculate_nmr_shieldings(m_mol, r_mol_pc, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=h2o_nmr_atoms_coords, label="isolated mol: NICS-like contribution from mol to allenv", print_to_output=True)
+= calculate_nmr_shieldings(m_mol, r_mol_pc, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=h2o_nmr_atoms_coords, ghost_labels=h2o_nmr_atoms_label, label="isolated m_mol: NICS-like contribution from mol to allenv", print_to_output=True)
 
 # do the calculations on sub2="m_h2o"+"m_env"
 r_allenv = adfsinglepointjob(m_h2o+m_env, basis_set, settings=settings, options=gen_sym_opts).run()
 
 r2_iso, r2_aniso \
-= calculate_nmr_shieldings(m_h2o+m_env, r_allenv, active_atoms=h2o_nmr_atoms_index, active_labels=h2o_nmr_atoms_label, active_coords=active_nmr_atoms_coords, label="isolated allenv", print_to_output=True)
-
-
-# PRINT OUT the data:
+= calculate_nmr_shieldings(m_h2o+m_env, r_allenv, active_atoms=h2o_nmr_atoms_index, active_labels=h2o_nmr_atoms_label, active_coords=h2o_nmr_atoms_coords, label="isolated m_allenv", print_to_output=True)
 
 for i, ind in enumerate(h2o_nmr_atoms_index):
 
@@ -447,8 +438,7 @@ for i, ind in enumerate(h2o_nmr_atoms_index):
     print("The anisotropic shielding of nucleus {} placed at {} from calculations on isolated sub2(allenv) is {:.3f}".format(nuc,k,r2))
     print("The total anisotropic shielding of nucleus {} placed at {} estimated as a sum of results for isolated subsystems is {:.3f}".format(nuc,k,r1+r2))
 
-
-# the same, but adding ghost atoms:
+# do the same, but adding ghost atoms:
 
 # do the calculations on sub1="m_mol" with ghosts on atoms from other molecules:
 # because we want to do the NMR of Hb, and this nucleus is not present in sub1, we should normally need to add it as point charges,
@@ -456,16 +446,13 @@ for i, ind in enumerate(h2o_nmr_atoms_index):
 r_mol_gh  = adfsinglepointjob(m_mol.add_as_ghosts(m_h2o+m_env),  basis_set, settings=settings, options=gen_sym_opts).run()
 
 r1_iso_gh, r1_aniso_gh \
-= calculate_nmr_shieldings(m_mol.add_as_ghosts(m_h2o+m_env), r_mol_gh, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=h2o_nmr_atoms_coords, label="isolated mol: NICS-like contribution from mol to allenv with allenv as ghosts", print_to_output=True)
+= calculate_nmr_shieldings(m_mol.add_as_ghosts(m_h2o+m_env), r_mol_gh, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=h2o_nmr_atoms_coords, ghost_labels=h2o_nmr_atoms_label, label="isolated m_mol: NICS-like contribution from mol to allenv with allenv as ghosts", print_to_output=True)
 
 # do the calculations on sub2="m_h2o"+"m_env"
 r_allenv_gh = adfsinglepointjob((m_h2o+m_env).add_as_ghosts(m_mol), basis_set, settings=settings, options=gen_sym_opts).run()
 
 r2_iso_gh, r2_aniso_gh \
-= calculate_nmr_shieldings((m_h2o+m_env).add_as_ghosts(m_mol), r_allenv_gh, active_atoms=h2o_nmr_atoms_index, active_labels=h2o_nmr_atoms_label, active_coords=active_nmr_atoms_coords, label="isolated allenv with mol as ghosts", print_to_output=True)
-
-
-# PRINT OUT the data:
+= calculate_nmr_shieldings((m_h2o+m_env).add_as_ghosts(m_mol), r_allenv_gh, active_atoms=h2o_nmr_atoms_index, active_labels=h2o_nmr_atoms_label, active_coords=h2o_nmr_atoms_coords, label="isolated allenv with mol as ghosts", print_to_output=True)
 
 for i, ind in enumerate(h2o_nmr_atoms_index):
 
@@ -517,6 +504,3 @@ for i, ind in enumerate(h2o_nmr_atoms_index):
     print("Total BSSE correction on the anisotropic shielding of nucleus {} at {} is {:.3f}".format(nuc, k, delta3+delta4))
     print("\n")
  
-
-
-
