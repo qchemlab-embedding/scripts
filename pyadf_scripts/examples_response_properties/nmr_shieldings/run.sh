@@ -3,17 +3,17 @@
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=8
 #SBATCH --mem-per-cpu=5GB
-#SBATCH --time=12:00:00 
+#SBATCH --time=01:00:00 
 #SBATCH -A plgqcembed-cpu
-#SBATCH -p plgrid
+#SBATCH -p plgrid-testing
 #SBATCH --output="output.out"
 #SBATCH --error="error.err"
 
 # select one of these to test:
-#project=prp_scalarZORA_super_isolated
+project=prp_scalarZORA_super_isolated
 #project=prp_scalarZORA_super_fnt
 #project=prp_scalarZORA_super_fde
-project=prp_soZORA_super_isolated
+#project=prp_soZORA_super_isolated
 #project=prp_soZORA_super_fnt
 
 # adapt your data_dir
@@ -31,7 +31,7 @@ eval "$(conda shell.bash hook)"
 
 conda activate /net/pr2/projects/plgrid/plggqcembed/devel/tools/conda_environments/pyadf-devel-nmr-env/env
 export PYADFHOME=/net/pr2/projects/plgrid/plggqcembed/devel/pyadf-devel-nmr
-config='/net/pr2/projects/plgrid/plggqcembed/devel/tools/pyadf-jobrunner-ADF2022.conf'
+config='/net/pr2/projects/plgrid/plggqcembed/devel/tools/pyadf-jobrunner-ADF2021.conf'
 
 cd $data_dir
 pyadf -c $config  $project.pyadf
