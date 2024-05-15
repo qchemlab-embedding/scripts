@@ -9,12 +9,15 @@
 #SBATCH --output="output.out"
 #SBATCH --error="error.err"
 
+
 # select one of these to test:
-project=prp_scalarZORA_super_isolated
+#project=prp_scalarZORA_super_isolated
 #project=prp_scalarZORA_super_fnt
 #project=prp_scalarZORA_super_fde
 #project=prp_soZORA_super_isolated
 #project=prp_soZORA_super_fnt
+#project=prp_scZORA_COSMO
+project=prp_soZORA_COSMO
 
 # adapt your data_dir
 data_dir=$PLG_GROUPS_STORAGE/plggqcembed/gosia-storage/pyadf_tests/pyadf_scripts/examples_response_properties/nmr_shieldings/$project

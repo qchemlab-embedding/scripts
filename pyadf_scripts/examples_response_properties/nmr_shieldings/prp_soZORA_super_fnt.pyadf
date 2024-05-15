@@ -382,7 +382,7 @@ r1_iso, r1_aniso \
 # - we do not do "FDE" here, as in strict FDE, m_mol is now kept as frozen
 # - we do not repeat calculations for r_mol - it is done above
 r2_iso, r2_aniso \
-= calculate_nmr_shieldings(m_mol, r_mol, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=h2o_nmr_atoms_coords, label="FnT-optimized NICS-like contribution from mol to allenv", print_to_output=True)
+= calculate_nmr_shieldings(m_mol, r_mol, active_atoms=[], active_labels=[], active_coords=[], ghost_coords=h2o_nmr_atoms_coords, ghost_labels=h2o_nmr_atoms_label, label="FnT-optimized NICS-like contribution from mol to allenv", print_to_output=True)
 
 
 for i, ind in enumerate(h2o_nmr_atoms_index):
