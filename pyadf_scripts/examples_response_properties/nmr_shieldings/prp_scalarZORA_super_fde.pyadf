@@ -170,7 +170,6 @@ gen_sym_opts = ['NOSYM', 'NOSYMFIT', 'NUCLEARMODEL gaussian']
 
 # general settings for FDE - adapt as needed
 fde_nadd_kin = 'PW91K'    # choose the potential for the non-additive kinetic part of interaction energy
-max_fnt_cycles = 10       # choose the maximum number of freeze-and-thaw cycles
 save_potentials_densities = False
 
 fde_exc_opts = ['QTENS', 'ALLOW POSHOMO']
@@ -178,9 +177,6 @@ gen_fde_opts = gen_sym_opts + fde_exc_opts
 
 fde_act_opts = {'FULLGRID':'', 'TNAD':fde_nadd_kin, 'ENERGY':''}
 fde_frz_opts = {}
-
-fnt_act_opts = {'FULLGRID':'', 'TNAD':fde_nadd_kin, 'ENERGY':'', 'RELAXCYCLES': max_fnt_cycles }
-fnt_frz_opts = {"RELAX":""}
 
 basis_act = basis_set
 basis_frz = basis_set
@@ -305,7 +301,7 @@ for i, ind in enumerate(super_nmr_atoms_index):
 r_allenv = adfsinglepointjob(m_h2o+m_env, basis_set, settings=settings, options=gen_sym_opts).run()
 
 frags = [ fragment(None,  [m_mol]), 
-          fragment(r_allenv, [m_h2o+m_env], isfrozen=True, fdeoptions=fnt_frz_opts) ]
+          fragment(r_allenv, [m_h2o+m_env], isfrozen=True, fdeoptions=fde_frz_opts) ]
 
 r_mol_with_frozen_allenv = adffragmentsjob(frags, basis_set, settings=settings, fde=fde_act_opts, options=gen_fde_opts).run()
 

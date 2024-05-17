@@ -177,9 +177,6 @@ save_potentials_densities = False
 fde_exc_opts = ['QTENS', 'ALLOW POSHOMO']
 gen_fde_opts = gen_sym_opts + fde_exc_opts
 
-fde_act_opts = {'FULLGRID':'', 'TNAD':fde_nadd_kin, 'ENERGY':''}
-fde_frz_opts = {}
-
 fnt_act_opts = {'FULLGRID':'', 'TNAD':fde_nadd_kin, 'ENERGY':'', 'RELAXCYCLES': max_fnt_cycles }
 fnt_frz_opts = {"RELAX":""}
 
