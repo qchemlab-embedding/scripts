@@ -11,10 +11,12 @@
 
 
 # select one of these to test:
-project=prp_scalarZORA_super
+#project=prp_scalarZORA_super
+#project=prp_soZORA_super
+project=prp_scalarZORA_super_fde
 
 # adapt your data_dir
-data_dir=$PLG_GROUPS_STORAGE/plggqcembed/gosia-storage/pyadf_tests/pyadf_scripts/examples_response_properties/nmr_shieldings/$project
+data_dir=$PLG_GROUPS_STORAGE/plggqcembed/gosia-storage/pyadf_tests/pyadf_scripts/examples_response_properties/nmr_spinspin/$project
 mkdir -p $data_dir
 
 # these do not need to be changed

@@ -27,7 +27,7 @@ def calculate_nmr_couplings(scf_results, perturbing_atoms=None, perturbing_label
 
 
     cpl_settings = cplsettings()
-    cpl_settings.set_operators(['fc', 'sd', 'dso', 'pso'])
+    cpl_settings.set_operators(['fc', 'dso', 'pso'])
     cpl_settings.set_atompert(perturbing_atoms)
     cpl_settings.set_atomresp(responding_atoms)
 
@@ -113,16 +113,16 @@ print(m_tot.print_coordinates())
 #
 # - adapt these as needed;
 # - search in pyadf code to find out what they mean 
-# - setup related to ADF-NMR job is done in calculate_nmr_couplings function
+# - setup related to ADF-NMR job is done in calculate_nmr_shieldings function
 # ------------------------------------------------------------------------------------------------
 
 settings = adfsettings()
 
-settings.set_ZORA(ZORA=True, SpinOrbit=False)
+settings.set_ZORA(ZORA=True, SpinOrbit=True)
 settings.set_unrestricted(False)
+settings.set_noncollinear(True)
 settings.set_functional('PBE')                 # choose DFT functional
-# note the use of specific basis sets - adapted for NMR spin-spin couplings
-basis_set = "TZ2P-J"                           # choose the basis set
+basis_set = "DZP"                              # choose the basis set
 
 # these settings can be left as they are:
 settings.ncycles=1000                     

@@ -122,6 +122,9 @@ settings.set_ZORA(ZORA=True, SpinOrbit=False)
 settings.set_unrestricted(False)
 settings.set_functional('PBE')                 # choose DFT functional
 # note the use of specific basis sets - adapted for NMR spin-spin couplings
+# this we need to use for the subsystem including the nuclei for which we calculate the couplings
+# other subsystems can be described with different basis sets,
+# but, since we want to compare with supermolecular results, we keep it for all subsystems:
 basis_set = "TZ2P-J"                           # choose the basis set
 
 # these settings can be left as they are:
@@ -134,13 +137,28 @@ settings.set_occupations(['KEEPORBITALS '+str(settings.ncycles)])
 gen_sym_opts = ['NOSYM', 'NOSYMFIT', 'NUCLEARMODEL gaussian']
 
 
+# general settings for FDE - adapt as needed
+fde_nadd_kin = 'PW91K'    # choose the potential for the non-additive kinetic part of interaction energy
+max_fnt_cycles = 10       # choose the maximum number of freeze-and-thaw cycles
+save_potentials_densities = False
+
+fde_exc_opts = ['QTENS', 'ALLOW POSHOMO']
+gen_fde_opts = gen_sym_opts + fde_exc_opts
+
+fde_act_opts = {'FULLGRID':'', 'TNAD':fde_nadd_kin, 'ENERGY':''}
+fde_frz_opts = {}
+
+fnt_act_opts = {'FULLGRID':'', 'TNAD':fde_nadd_kin, 'ENERGY':'', 'RELAXCYCLES': max_fnt_cycles }
+fnt_frz_opts = {"RELAX":""}
+
+basis_act = basis_set
+basis_frz = basis_set
+
+
 # ------------------------------------------------------------------------------------------------
-# setup - selection of the NMR centers:
-#     here, you can select nuclei for which the NMR shielding is calculated
-#       * it can reduce the computational time, otherwise the code does calculations on all nuclei
-#       * the numbering order of atoms:
-#          * it should be given in "input order" (=as in your xyz files)
-#          * atom numbering starts from 1
+# setup - selection of the NMR centers
+#     here, the nuclear indices are given in an INPUT order (as in the respective xyz files)
+#     and atom numbering starts from 1
 # ------------------------------------------------------------------------------------------------
 
 # select nuclei in an active subsystem
@@ -174,19 +192,27 @@ for i in super_nmr_atoms_index:
     super_nmr_atoms_coords.append(m_tot.get_coordinates()[i-1])
 
 
-# ---------------------------------------------------------------------------------------------------------------------
-# now,  we demonstrate how to calculate the NMR spin-spin couplings of the selected nuclei in an entire system
-#
-# ---------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------
+# now,  we demonstrate how to calculate the NMR spin-spin couplings
+# -----------------------------------------------------------------
 
 
-# (1) run calculations on an entire system ("supermolecular" reference):
-# ----------------------------------------------------------------------
+# (1) we calculate the couplings between C-N in the same subsystem
+# ----------------------------------------------------------------
+# we assume the following subsystems:
+# * active = m_mol
+# * frozen = m_h2o + m_env
 
-r_tot  = adfsinglepointjob(m_tot,  basis_set, settings=settings, options=gen_sym_opts).run()
-agrid = adfgrid(r_tot)
+# if not done before, we need to prepare a frozen environment first:
+r_allenv = adfsinglepointjob(m_h2o+m_env, basis_set, settings=settings, options=gen_sym_opts).run()
 
-# let's calculate the couplings between C-Hb and N-Hb:
+frags = [ fragment(None,  [m_mol]), 
+          fragment(r_allenv, [m_h2o+m_env], isfrozen=True, fdeoptions=fde_frz_opts) ]
 
-calculate_nmr_couplings(r_tot, perturbing_atoms=[9], perturbing_labels=["Hb"], responding_atoms=[1,2], responding_labels=["C", "N"], label="supermolecule")
+r_mol_with_frozen_allenv = adffragmentsjob(frags, basis_set, settings=settings, fde=fde_act_opts, options=gen_fde_opts).run()
+
+# let's calculate the couplings between C-N in the same subsystem
+
+calculate_nmr_couplings(r_mol_with_frozen_allenv, perturbing_atoms=[1], perturbing_labels=["C"], responding_atoms=[2], responding_labels=["N"], label="FDE:active=mol, frozen=allenv") 
+
 
