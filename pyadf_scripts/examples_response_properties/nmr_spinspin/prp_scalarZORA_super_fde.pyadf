@@ -33,6 +33,14 @@ def calculate_nmr_couplings(scf_results, perturbing_atoms=None, perturbing_label
 
     cpl_results = adfcpljob(adfres=scf_results, settings=cpl_settings).run()
 
+    for n1 in perturbing_atoms:
+        for n2 in responding_atoms:
+            k = cpl_results.get_coupling([n1, n2], 'K')
+            j = cpl_results.get_coupling([1, 2])
+            print(' K({:d},{:d}) = {:7.3f}'.format(n1,n2,k))
+            print('\n')
+
+
     all_j = cpl_results.get_all_couplings()
     all_k = cpl_results.get_all_couplings('K')
     for j, k in zip(all_j, all_k):
