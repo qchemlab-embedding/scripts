@@ -1,0 +1,35 @@
+#!/bin/bash -l
+#SBATCH -J dirac_test
+#SBATCH -N 1
+#SBATCH --ntasks-per-node=8
+#SBATCH --mem-per-cpu=5GB
+#SBATCH --time=72:00:00 
+#SBATCH -A plgqcembed-cpu
+#SBATCH -p plgrid
+#SBATCH --output="output.out"
+#SBATCH --error="error.err"
+
+inp1=dc.inp
+inp2=shielding_dc.inp
+inp3=spinspin_dc.inp
+
+mol=coordinates/h2o.xyz
+
+scratch=$SCRATCH/dirac_tests/simple-dc
+mkdir -p $scratch
+
+cd $SLURM_SUBMIT_DIR
+
+srun /bin/hostname
+
+module purge
+module load dirac/23.0-intel-2023a-int64
+
+# this demonstrates how to run calculations with Dirac-Coulomb Hamiltonian
+# step 1: scf
+pam-dirac --scratch=$scratch --noarch --mw=2900 --aw=1900 --mpi=$SLURM_NPROCS --inp=$inp1 --mol=$mol --outcmo
+
+# step 2: response
+# run this only if (1) ended up with success
+pam-dirac --scratch=$scratch --noarch --mw=2900 --aw=1900 --mpi=$SLURM_NPROCS --inp=$inp2 --mol=$mol --incmo
+pam-dirac --scratch=$scratch --noarch --mw=2900 --aw=1900 --mpi=$SLURM_NPROCS --inp=$inp3 --mol=$mol --incmo
