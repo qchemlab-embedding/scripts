@@ -1,0 +1,35 @@
+#
+import numpy
+import os
+
+from pyadf import *
+if 'pyadfenv' not in globals():
+    from pyadf.Initialization import *
+
+results_dir=pyadfenv.outdir
+
+# 1. molecular data:
+geometries_dir = pyadfenv.outdir
+file_mol  = os.path.join(geometries_dir, 'YOUR-FILE.xyz')
+
+m_mol  = molecule(file_mol)
+m_mol.set_symmetry('NOSYM')
+
+print(m_mol.print_coordinates())
+
+# 2. general settings for ADF job
+settings = adfsettings(zlmfit=True)
+basis_set = 'TZ2P'
+settings.set_functional('PBE0')
+settings.set_dispersion('Grimme4')
+settings.ncycles=1000
+#settings.set_integration(accint=8.0, acclist=[8.0, 8.0])
+settings.set_integration(accint=6.0, becke='Good')
+settings.set_dependency(True)
+settings.set_exactdensity(True)
+settings.set_save_tapes([21,10,41])
+settings.set_occupations(['KEEPORBITALS '+str(settings.ncycles)])
+gen_sym_opts = ['NOSYM', 'NOSYMFIT', 'NUCLEARMODEL gaussian', 'TOTALENERGY', 'NumericalQuality Good']
+
+# 3. run SCF
+r_mol  = adfsinglepointjob(m_mol,  basis_set, settings=settings, options=gen_sym_opts).run()
