@@ -4,38 +4,30 @@
 #SBATCH --ntasks-per-node=8
 #SBATCH --mem-per-cpu=5GB
 #SBATCH --time=01:00:00 
-#SBATCH -A plgqcembed-cpu
+#SBATCH -A plgqchemtda-cpu
 #SBATCH -p plgrid-testing
 #SBATCH --output="output.out"
 #SBATCH --error="error.err"
 
-# adapt this:
-scratch=$SCRATCH/gosia-scratch/pyadf-tests/single_point_ADF
-mkdir -p $scratch
-
-data_dir=$PLG_GROUPS_STORAGE/plggqcembed/gosia-storage/pyadf_tests/single_point_ADF
+export data_dir=YOUR-DIR-IN_STORAGE
 mkdir -p $data_dir
 
-
+cd $SLURM_SUBMIT_DIR
 project=sp
-cp $project.pyadf $data_dir
-cp -r coordinates $data_dir
+cp $project.pyadf   $data_dir
+cp *.xyz            $data_dir/
 
-# normally, this should not need to be adapted:
 srun /bin/hostname
 
 module purge
-module use /net/pr2/projects/plgrid/plggqcembed/groupmodules
-module load pyadf-devel
+module load miniconda3/23.5.2-0
+eval "$(conda shell.bash hook)"
 
-cd $SLURM_SUBMIT_DIR
-config='/net/pr2/projects/plgrid/plggqcembed/devel/tools/pyadf-jobrunner.conf'
+conda activate /net/pr2/projects/plgrid/plggqcembed/devel/tools/conda_environments/pyadf-main-env/env
+config='/net/pr2/projects/plgrid/plggqcembed/devel/tools/pyadf-jobrunner-ADF2021.conf'
 
-# to save results add -s flag:
-# pyadf -s --jobrunnerconf $config $project.pyadf
-# otherwise (note - execution in storage, since ADF can generate large temp files):
 cd $data_dir
-pyadf --jobrunnerconf $config $project.pyadf
-cp *out    $SLURM_SUBMIT_DIR
-cd $SLURM_SUBMIT_DIR
+pyadf -c $config  $project.pyadf
+cp *out $SLURM_SUBMIT_DIR/
 
+cd $SLURM_SUBMIT_DIR
